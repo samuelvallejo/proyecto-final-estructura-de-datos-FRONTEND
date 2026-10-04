@@ -56,6 +56,7 @@ export default function App() {
   const [finding, setFinding] = useState<ScanResponse | null>(null);
   const [location, setLocation] = useState<Position | null>(null);
   const [locationError, setLocationError] = useState(() => navigator.geolocation ? '' : 'Este navegador no permite obtener la ubicación.');
+  const [requestingLocation, setRequestingLocation] = useState(false);
   const [error, setError] = useState('');
   const [lastCheck, setLastCheck] = useState('');
   const [lastScan, setLastScan] = useState<ScanResponse | null>(null);
@@ -79,6 +80,7 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const locationRef = useRef<Position | null>(null);
   const locationDenied = useRef(false);
+  const pendingPotholeFrame = useRef<{ frame: Blob; capturedAt: number } | null>(null);
 
   async function refreshReports(mode: 'recent' | 'priority' = sort, append = false) {
     const sequence = ++refreshSequence.current;
@@ -93,6 +95,73 @@ export default function App() {
     catch (cause) { if (sequence === refreshSequence.current) setError((cause as Error).message); }
     finally { if (sequence === refreshSequence.current) setLoadingReports(false); }
   }
+
+  function saveReportedFinding(response: ScanResponse) {
+    setFinding(response);
+    if (response.report && !response.existing) {
+      setReports(current => current.some(item => item.id === response.report!.id)
+        ? current : [response.report!, ...current]);
+      setTotalReports(current => current + 1);
+    }
+  }
+
+  async function attachLocationToPendingFrame(position: Position) {
+    const pending = pendingPotholeFrame.current;
+    if (!pending) return;
+    if (Date.now() - pending.capturedAt > 15000) {
+      pendingPotholeFrame.current = null;
+      setLocationError('GPS listo. El fotograma ya es antiguo; vuelve a enfocar el bache para guardar su ubicación actual.');
+      return;
+    }
+    if (position.accuracy > 100) return;
+
+    // No enviar el mismo fotograma varias veces si el GPS emite actualizaciones seguidas.
+    pendingPotholeFrame.current = null;
+    try {
+      const response = await scanFrame(pending.frame, position, new AbortController().signal);
+      saveReportedFinding(response);
+      setLocationError('');
+    } catch (cause) {
+      pendingPotholeFrame.current = pending;
+      setError((cause as Error).message);
+    }
+  }
+
+  function retryLocation() {
+    if (!navigator.geolocation) {
+      setLocationError('Este navegador no permite obtener la ubicación. Abre la app en Safari y activa Localización en Ajustes del iPhone.');
+      return;
+    }
+    setRequestingLocation(true);
+    setLocationError('Solicitando ubicación precisa… Acepta el permiso del navegador y espera a que el GPS obtenga señal.');
+    navigator.geolocation.getCurrentPosition(position => {
+      const nextPosition: Position = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        capturedAt: position.timestamp,
+      };
+      locationRef.current = nextPosition;
+      locationDenied.current = false;
+      setLocation(nextPosition);
+      setLocationError(nextPosition.accuracy > 100
+        ? 'La ubicación aún es imprecisa. Sal a un lugar abierto para obtener GPS de hasta ±100 m.'
+        : '');
+      setGpsRetry(current => current + 1);
+      void attachLocationToPendingFrame(nextPosition).finally(() => setRequestingLocation(false));
+    }, cause => {
+      locationDenied.current = cause.code === 1;
+      if (cause.code === 1) {
+        locationRef.current = null;
+        setLocation(null);
+        setLocationError('El navegador bloqueó la ubicación. Permítela en la configuración del sitio y activa Localización en los ajustes del dispositivo; luego toca Reintentar ubicación.');
+      } else {
+        setLocationError('No se obtuvo señal GPS. Activa Localización y prueba al aire libre; se requiere precisión de hasta ±100 m.');
+      }
+      setRequestingLocation(false);
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  }
+
   useEffect(() => {
     let cancelled = false;
     const sequence = ++refreshSequence.current;
@@ -133,6 +202,7 @@ export default function App() {
         locationDenied.current = false;
         setLocation(nextPosition);
         setLocationError(pos.coords.accuracy > 100 ? 'La ubicación aún es imprecisa. Sal a un lugar abierto para obtener GPS de hasta ±100 m.' : '');
+        void attachLocationToPendingFrame(nextPosition);
       },
       cause => {
         locationDenied.current = cause.code === 1;
@@ -151,6 +221,12 @@ export default function App() {
     let cancelled = false;
     let stream: MediaStream | null = null;
     const video = videoRef.current;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('La cámara requiere HTTPS o localhost y un navegador compatible.');
+      setScanning(false);
+      return;
+    }
 
     navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -207,11 +283,13 @@ export default function App() {
         setScanCount(current => current + 1);
         setLastCheck(new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         if (response.result.isPothole) {
-          setFinding(response);
-          if (response.report && !response.existing) {
-            setReports(current => current.some(item => item.id === response.report!.id)
-              ? current : [response.report!, ...current]);
-            setTotalReports(current => current + 1);
+          saveReportedFinding(response);
+          if (response.report) pendingPotholeFrame.current = null;
+          else {
+            pendingPotholeFrame.current = { frame, capturedAt: Date.now() };
+            if (locationRef.current?.accuracy !== undefined && locationRef.current.accuracy <= 100) {
+              void attachLocationToPendingFrame(locationRef.current);
+            }
           }
         }
         timer = setTimeout(analyze, response.nextScanMs || 2500);
@@ -234,7 +312,10 @@ export default function App() {
     if (!navigator.mediaDevices?.getUserMedia) { setError('La cámara requiere HTTPS o localhost y un navegador compatible.'); return; }
     setError('');
     setFinding(null);
+    pendingPotholeFrame.current = null;
     setLastScan(null); setScanCount(0); setLastCheck('');
+    // Solicitar GPS durante el toque que inicia el escaneo mejora el permiso en Safari móvil.
+    retryLocation();
     setScanning(true);
     setTab('scan');
   }
@@ -320,7 +401,7 @@ export default function App() {
 
             {error && <div className="message error"><AlertTriangle size={17} /><span>{error}</span><button onClick={() => setError('')} aria-label="Cerrar"><X size={16} /></button></div>}
             {locationError && scanning && <div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div>}
-            {locationError && scanning && <button className="button-secondary gps-retry" onClick={() => setGpsRetry(current => current + 1)}><LocateFixed size={16} /> Reintentar ubicación</button>}
+            {locationError && scanning && <button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}><LocateFixed size={16} /> {requestingLocation ? 'Solicitando ubicación…' : 'Reintentar ubicación'}</button>}
             {scanning && <div className="scan-feedback" role="status" aria-live="polite">
               <strong>{analyzing ? 'Analizando la imagen…' : lastScan?.result.isPothole ? 'Daño detectado' : lastScan ? 'No se detectó daño en este fotograma' : 'Preparando cámara y GPS…'}</strong>
               <span>{scanCount} fotogramas analizados{lastCheck ? ` · ${lastCheck}` : ''}</span>
@@ -343,7 +424,7 @@ export default function App() {
                   ? finding.existing ? 'Este punto ya estaba registrado. El escaneo continúa.' : 'Registrado automáticamente con el GPS del celular. Pendiente de verificación.'
                   : finding.locationNote || 'No se pudo ubicar este daño en el mapa.'}</p>
                 {finding.report && <p className="precision-note">{[finding.report.zone.street, finding.report.zone.neighborhood, finding.report.zone.city].filter(Boolean).join(', ') || 'Ubicación del celular'} · {finding.report.location.lat.toFixed(6)}, {finding.report.location.lng.toFixed(6)} · ±{Math.round(finding.report.location.accuracy)} m</p>}
-                {!finding.report && <p className="precision-note">La detección funciona sin GPS; para guardar el punto debes permitir la ubicación. Una foto de otro lugar no proporciona las coordenadas reales del hueco.</p>}
+                {!finding.report && <p className="precision-note">Permite el GPS y toca “Reintentar ubicación”. Si el fotograma sigue reciente, se guardará con la posición actual; si ya pasó más tiempo, vuelve a enfocar el bache. La imagen por sí sola no revela dónde fue tomada.</p>}
                 <div className="action-row">
                   <button className="button-secondary" onClick={() => setFinding(null)}><X size={17} /> Cerrar aviso</button>
                   <button className="button-primary" onClick={() => finding.report && showOnMap(finding.report)} disabled={!finding.report}><Check size={17} /> Ver en mapa</button>
@@ -375,7 +456,7 @@ export default function App() {
             <label className="map-risk-filter">Mostrar riesgo<select value={mapRisk} onChange={event => { setMapRisk(event.target.value); setMapFocus(null); setPatrol(null); }}><option value="">Todos los niveles</option>{Object.entries(riskText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <div className="map-frame"><Suspense fallback={<div className="map-loading" role="status">Preparando mapa…</div>}><ReportMap reports={reports.filter(report => !mapRisk || report.hazardLevel === mapRisk)} location={location} focus={mapFocus || patrol} onSelect={setMapFocus} /></Suspense></div>
             {mapFocus && <ReportCard report={mapFocus} />}
-            {locationError && <div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div>}
+            {locationError && <><div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div><button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}><LocateFixed size={16} /> {requestingLocation ? 'Solicitando ubicación…' : 'Reintentar ubicación'}</button></>}
             <div className="map-legend"><span><i className="legend-dot critical" /> Crítico</span><span><i className="legend-dot high" /> Alto</span><span><i className="legend-dot low" /> Menor</span><span><i className="legend-dot you" /> Tú</span></div>
             <div className="patrol-controls"><button className="button-secondary" disabled={patrolBusy || !reports.length || Boolean(mapRisk)} onClick={() => void patrolStep('previous')}>Anterior</button><span>{mapRisk ? 'Quita el filtro para recorrer todos' : 'Recorrido por prioridad'}</span><button className="button-secondary" disabled={patrolBusy || !reports.length || Boolean(mapRisk)} onClick={() => void patrolStep('next')}>Siguiente</button></div>
             {patrol && !mapFocus && <ReportCard report={patrol} />}
