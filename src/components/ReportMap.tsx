@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Position, Report } from '../types';
+import { LocateFixed, Maximize2 } from 'lucide-react';
 
-interface Props { reports: Report[]; location: Position | null; focus?: Report | null }
-export default function ReportMap({ reports, location, focus }: Props) {
+interface Props { reports: Report[]; location: Position | null; focus?: Report | null; onSelect?: (report: Report) => void }
+export default function ReportMap({ reports, location, focus, onSelect }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
-  const fittedReportCount = useRef(0);
+  const fittedReportIds = useRef('');
+  const centeredLocation = useRef(false);
+  const [tileError, setTileError] = useState(false);
   const [initialView] = useState(() => ({
     center: (location
       ? [location.lat, location.lng]
@@ -19,14 +22,18 @@ export default function ReportMap({ reports, location, focus }: Props) {
     if (!container.current) return;
     const instance = L.map(container.current, { zoomControl: false })
       .setView(initialView.center, initialView.zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
     }).addTo(instance);
+    tiles.on('tileerror', () => setTileError(true));
+    tiles.on('load', () => setTileError(false));
     L.control.zoom({ position: 'bottomright' }).addTo(instance);
     map.current = instance;
     layer.current = L.layerGroup().addTo(instance);
-    setTimeout(() => instance.invalidateSize(), 150);
-    return () => { instance.remove(); map.current = null; layer.current = null; };
+    const timer = setTimeout(() => instance.invalidateSize(), 150);
+    const observer = new ResizeObserver(() => instance.invalidateSize());
+    observer.observe(container.current);
+    return () => { clearTimeout(timer); observer.disconnect(); instance.remove(); map.current = null; layer.current = null; };
   }, [initialView]);
   useEffect(() => {
     if (!map.current || !layer.current) return;
@@ -49,6 +56,7 @@ export default function ReportMap({ reports, location, focus }: Props) {
       const marker = L.circleMarker([report.location.lat, report.location.lng], {
         radius: 10, color: '#10271f', weight: 3, fillColor: color, fillOpacity: 1,
       }).addTo(layer.current).bindPopup(popup);
+      marker.on('click', () => onSelect?.(report));
       if (focus?.id === report.id) marker.openPopup();
     }
     if (location) {
@@ -60,17 +68,28 @@ export default function ReportMap({ reports, location, focus }: Props) {
         radius: 7, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1,
       }).addTo(layer.current).bindPopup('Ubicación aproximada de tu celular');
     }
-    if (!focus && reports.length > 0 && fittedReportCount.current !== reports.length) {
+    const reportIds = reports.map(report => report.id).join('|');
+    if (!focus && reports.length > 0 && fittedReportIds.current !== reportIds) {
       map.current.fitBounds(reports.map(item => [item.location.lat, item.location.lng] as L.LatLngTuple), {
         padding: [28, 28], maxZoom: 15,
       });
-      fittedReportCount.current = reports.length;
+      fittedReportIds.current = reportIds;
     }
-    if (focus) map.current.setView([focus.location.lat, focus.location.lng], 17);
-    else if (location && !reports.length) map.current.setView([location.lat, location.lng], 16);
-  }, [reports, location, focus]);
+    if (!focus && location && !reports.length && !centeredLocation.current) { map.current.setView([location.lat, location.lng], 16); centeredLocation.current = true; }
+  }, [reports, location, focus, onSelect]);
   useEffect(() => {
-    if (focus && map.current) map.current.setView([focus.location.lat, focus.location.lng], 17);
+    if (focus) map.current?.setView([focus.location.lat, focus.location.lng], 17);
   }, [focus]);
-  return <div ref={container} className="report-map" aria-label="Mapa de reportes viales" />;
+  function fitReports() {
+    if (!map.current || !reports.length) return;
+    map.current.fitBounds(reports.map(report => [report.location.lat, report.location.lng] as L.LatLngTuple), { padding: [28, 28], maxZoom: 15 });
+  }
+  return <div className="map-wrapper">
+    <div ref={container} className="report-map" aria-label="Mapa de reportes viales" />
+    <div className="map-tools" aria-label="Controles del mapa">
+      <button onClick={() => location && map.current?.setView([location.lat, location.lng], 16)} disabled={!location}><LocateFixed size={16} /> Mi ubicación</button>
+      <button onClick={fitReports} disabled={!reports.length}><Maximize2 size={16} /> Ver todos</button>
+    </div>
+    {tileError && <p className="map-tile-warning" role="status">No se pudo cargar parte del mapa. Comprueba tu conexión; los puntos cargados siguen disponibles.</p>}
+  </div>;
 }
