@@ -8,6 +8,7 @@ import { ApiError, loadHealth, loadNearby, loadReports, loadStructures, patrolRe
 import type { Health, Position, Report, ScanResponse, StructureStats } from './types';
 import { Stack } from './data-structures/Stack';
 import ReportMap from './components/ReportMap';
+import ReportExplorer from './components/ReportExplorer';
 
 type Tab = 'scan' | 'map' | 'reports' | 'structures';
 const structureLabels: Record<string, string> = {
@@ -385,7 +386,7 @@ export default function App() {
             <div className="section-row"><h2>Actividad registrada</h2><span>{loadingReports ? 'Actualizando…' : `${reports.length} cargados`}</span></div>
             {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
             {!loadingReports && reports.length === 0 && <div className="empty-state"><Route size={31} /><strong>No hay reportes todavía</strong><p>Tu primer hallazgo puede ayudar a identificar una vía que necesita atención.</p><button className="button-primary" onClick={() => navigate('scan')}>Empezar a escanear <ArrowRight size={17} /></button></div>}
-            {reports.map(item => <div key={item.id}><ReportCard report={item} /><button className="button-secondary report-map-link" onClick={() => showOnMap(item)}><MapPin size={15} /> Ver ubicación en mapa</button></div>)}
+            <ReportExplorer reports={reports} total={totalReports} loading={loadingReports} onMap={showOnMap} />
             {hasMore && <button className="button-secondary" disabled={loadingReports} onClick={() => void refreshReports(sort, true)}>Cargar más reportes</button>}
           </div>
         )}

@@ -31,3 +31,18 @@
 .back-link{display:flex;align-items:center;gap:5px;border:0;background:transparent;color:#49745a;font-size:11px;margin:12px 21px 0;padding:0}.service-status{text-align:center;font-size:10px;color:#617b60;margin-top:12px}.report-filter,.patrol-controls{display:flex;gap:10px;margin-top:18px;align-items:center}.patrol-controls span{font-size:10px;color:#617b60;flex:1;text-align:center}.structure-card{display:flex;gap:12px;align-items:center;padding:15px;background:white;border:1px solid #e8ece5;border-radius:14px;margin-top:10px;color:#49745a}.structure-card div{flex:1}.structure-card strong{font-size:12px;color:#17251d}.structure-card p{font-size:11px;color:#788379;line-height:1.5;margin-top:4px}.structure-card>span{font-weight:800;font-size:13px}
 .scan-feedback{display:flex;flex-direction:column;gap:5px;padding:12px 14px;margin-top:12px;border:1px solid #dce8d6;border-radius:12px;background:#eef5e8;color:#35583e}.scan-feedback strong{font-size:12px}.scan-feedback span,.scan-feedback p{font-size:10px;line-height:1.5}.gps-retry{width:100%;margin-top:8px}.report-map-link{margin:0 0 15px auto;min-height:32px}.detection-box span{letter-spacing:0;white-space:normal;max-width:170px}.map-frame+.report-card{margin-top:12px}
 @media(min-width:431px){.phone-app{margin:24px 0;border-radius:25px;min-height:calc(100svh - 48px);height:calc(100svh - 48px);overflow-y:auto}.page{min-height:calc(100% - 140px)}}
+
+/* Explorador de reportes: controles accesibles y resultados adaptables. */
+.explorer-controls{margin-top:16px;padding:15px;background:#edf3e7;border:1px solid #d5e1cf;border-radius:14px}
+.search-control,.explorer-selects label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#35513c}
+.search-control span{display:flex;gap:6px;align-items:center}
+.explorer-controls input[type=search],.explorer-controls select{width:100%;min-width:0;border:1px solid #b7c7b0;background:white;color:#17251d;border-radius:8px;padding:10px;font:inherit;font-size:16px}
+.explorer-selects{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.favorite-filter{display:flex;gap:8px;align-items:center;font-size:12px;margin-top:14px;line-height:1.5}.favorite-filter input{width:18px;height:18px;accent-color:#355b35}
+.explorer-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.explorer-count{font-size:12px;color:#35513c;margin:16px 0 8px;line-height:1.6}.explorer-help{font-size:12px;color:#566458;line-height:1.5;margin-bottom:12px}
+.explorer-report{background:white;border:1px solid #dce4d7;border-radius:14px;padding:15px;margin:12px 0;overflow-wrap:anywhere}
+.explorer-report .report-title{gap:8px}.explorer-report .report-title strong{flex:1}.favorite-button{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;border-radius:8px;background:#f0f5e8;color:#42612e}
+.explorer-report p{font-size:13px;line-height:1.6;margin:8px 0;color:#455749}.explorer-report small{font-size:11px;color:#566458;line-height:1.5}.explorer-report details{margin:14px 0;font-size:13px}.explorer-report summary{cursor:pointer;color:#35513c;font-weight:700;padding:8px 0}.explorer-report li{line-height:1.6}.explorer-report>.button-secondary{width:100%}.report-id{font-size:11px!important}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #49792a;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
