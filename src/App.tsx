@@ -1,18 +1,21 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, ArrowRight, Camera, Check, CirclePause, Compass,
   Crosshair, LocateFixed, MapPin, Radar, RefreshCw, Route, ScanLine,
-  ShieldAlert, Sparkles, Square, X, Code2, ArrowLeft,
+  ShieldAlert, Sparkles, Square, X, Code2, ArrowLeft, Home,
 } from 'lucide-react';
 import { ApiError, loadHealth, loadNearby, loadReports, loadStructures, patrolReport, scanFrame } from './services/api';
-import type { Health, Position, Report, ScanResponse, StructureStats } from './types';
+import type { Health, Position, Report, ScanResponse, StructureStats, Trip } from './types';
 import { Stack } from './data-structures/Stack';
 const ReportMap = lazy(() => import('./components/ReportMap'));
 import ReportExplorer from './components/ReportExplorer';
 import ReportSummary from './components/ReportSummary';
 import ConnectionStatus from './components/ConnectionStatus';
+import LoadingIndicator from './components/LoadingIndicator';
+import TripPanel from './components/TripPanel';
+const TripHistory = lazy(() => import('./components/TripHistory'));
 
-type Tab = 'scan' | 'map' | 'reports' | 'structures';
+type Tab = 'home' | 'scan' | 'map' | 'reports' | 'structures' | 'trips';
 const structureLabels: Record<string, string> = {
   array: 'Arrays', singlyLinkedList: 'Lista simple', doublyLinkedList: 'Lista doble',
   circularSinglyLinkedList: 'Lista circular simple', circularDoublyLinkedList: 'Lista circular doble',
@@ -48,8 +51,11 @@ function frameFromVideo(video: HTMLVideoElement): Promise<Blob> {
       'image/jpeg', 0.85));
 }
 
-export default function App() {
-  const [tab, setTab] = useState<Tab>('scan');
+export default function App({ onLogout, logoutBusy }: { onLogout: () => void; logoutBusy: boolean }) {
+  const [tab, setTab] = useState<Tab>('home');
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
+  const tripIdRef = useRef<string | undefined>(undefined);
+  const updateTrip = useCallback((trip: Trip) => { setActiveTrip(trip); tripIdRef.current = trip.endedAt ? undefined : trip.id; }, []);
   const [scanning, setScanning] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -98,11 +104,10 @@ export default function App() {
 
   function saveReportedFinding(response: ScanResponse) {
     setFinding(response);
-    if (response.report && !response.existing) {
-      setReports(current => current.some(item => item.id === response.report!.id)
-        ? current : [response.report!, ...current]);
-      setTotalReports(current => current + 1);
-    }
+    const additions = response.detections?.filter(item => item.report && !item.existing).map(item => item.report!)
+      || (response.report && !response.existing ? [response.report] : []);
+    setReports(current => [...additions.filter(item => !current.some(old => old.id === item.id)), ...current]);
+    setTotalReports(current => current + additions.length);
   }
 
   async function attachLocationToPendingFrame(position: Position) {
@@ -118,7 +123,7 @@ export default function App() {
     // No enviar el mismo fotograma varias veces si el GPS emite actualizaciones seguidas.
     pendingPotholeFrame.current = null;
     try {
-      const response = await scanFrame(pending.frame, position, new AbortController().signal);
+      const response = await scanFrame(pending.frame, position, new AbortController().signal, tripIdRef.current);
       saveReportedFinding(response);
       setLocationError('');
     } catch (cause) {
@@ -223,8 +228,6 @@ export default function App() {
     const video = videoRef.current;
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('La cámara requiere HTTPS o localhost y un navegador compatible.');
-      setScanning(false);
       return;
     }
 
@@ -275,7 +278,7 @@ export default function App() {
         }
         const frame = await frameFromVideo(video);
         if (cancelled) return;
-        const response = await scanFrame(frame, locationRef.current, controller.signal);
+        const response = await scanFrame(frame, locationRef.current, controller.signal, tripIdRef.current);
         if (cancelled) return;
         firstFrame = false;
         setError('');
@@ -329,6 +332,7 @@ export default function App() {
     if (next !== tab) { history.current.push(tab); setHistorySize(history.current.size); }
     if (next !== 'scan' && scanning) stop();
     setTab(next);
+    if (next === 'structures') setStructures(null);
     setError('');
     if (next === 'map' || next === 'reports') void refreshReports();
   }
@@ -358,9 +362,12 @@ export default function App() {
           <div className="brand-mark"><ScanLine size={21} strokeWidth={2.5} /></div>
           <div className="brand-name">BACHE<span>SCAN</span><i>AI</i></div>
           <span className="header-pill"><span className="green-dot" /> VÍAS MÁS SEGURAS</span>
+          <button className="session-logout" disabled={logoutBusy} onClick={() => { stop(); onLogout(); }}>Cerrar sesión</button>
         </header>
         <ConnectionStatus health={health} busy={loadingReports} onRetry={() => { void refreshReports(); void loadHealth().then(setHealth).catch(() => setHealth(null)); }} />
         {historySize > 0 && <button className="back-link" onClick={goBack}><ArrowLeft size={15} /> Volver</button>}
+
+        {tab === 'home' && <div className="page home-page"><section className="intro"><span className="eyebrow">TU COMUNIDAD, TU CAMINO</span><h1>Bienvenido a <em>BacheScan AI.</em></h1><p>Encuentra posibles baches con la cámara, ubícalos en el mapa y guarda tus recorridos. Elige qué quieres hacer.</p><p className="home-success" role="status">Todo se ejecutó correctamente.</p></section><div className="home-options"><button onClick={() => navigate('scan')}><Camera size={27} /><strong>Escanear una vía</strong><span>Abre la cámara para detectar daños y registrar un recorrido de A a B.</span><ArrowRight size={20} /></button><button onClick={() => navigate('map')}><MapPin size={27} /><strong>Consultar el mapa</strong><span>Revisa los lugares reportados y su nivel de riesgo visual.</span><ArrowRight size={20} /></button><button onClick={() => navigate('trips')}><Route size={27} /><strong>Mis recorridos</strong><span>Consulta tus caminos guardados y los baches encontrados.</span><ArrowRight size={20} /></button><button onClick={() => navigate('reports')}><ShieldAlert size={27} /><strong>Explorar reportes</strong><span>Busca por lugar o riesgo y consulta la información de cada hallazgo.</span><ArrowRight size={20} /></button></div><section className="getting-started"><h2>Tu primer recorrido, en tres pasos</h2><ol><li><b>Permite cámara y ubicación.</b> Acepta los permisos cuando el navegador los solicite.</li><li><b>Indica de dónde sales y a dónde vas.</b> Inicia el recorrido con buena señal GPS.</li><li><b>Finaliza al llegar.</b> El mapa conserva las posiciones y los hallazgos registrados.</li></ol><p className="form-help">La IA identifica posibles daños y estima su riesgo visual. Los reportes requieren verificación. Configura el teléfono antes de conducir y mantén la aplicación abierta.</p></section></div>}
 
         {tab === 'scan' && (
           <div className="page scan-page">
@@ -369,6 +376,7 @@ export default function App() {
               <h1>La calle habla.<br /><em>Nosotros escuchamos.</em></h1>
               <p>Apunta la cámara a la vía. La IA analiza el video y registra los posibles daños en el mapa automáticamente.</p>
             </section>
+            <TripPanel position={location} trip={activeTrip} onUpdate={updateTrip} onStart={start} onStop={stop} onGps={retryLocation} gpsBusy={requestingLocation} analyzing={analyzing} scanning={scanning} />
 
             <section className={`camera-stage ${scanning ? 'is-live' : ''}`}>
               <video ref={videoRef} playsInline muted autoPlay className="camera-video" />
@@ -383,11 +391,12 @@ export default function App() {
               <div className="scan-corner top-left" /><div className="scan-corner top-right" />
               <div className="scan-corner bottom-left" /><div className="scan-corner bottom-right" />
               {scanning && <div className="scan-beam" />}
-              {scanning && lastScan?.result.isPothole && lastScan.result.boundingBox && <div className="detection-box" style={{
-                left: `${lastScan.result.boundingBox.xmin / 10}%`, top: `${lastScan.result.boundingBox.ymin / 10}%`,
-                width: `${(lastScan.result.boundingBox.xmax - lastScan.result.boundingBox.xmin) / 10}%`,
-                height: `${(lastScan.result.boundingBox.ymax - lastScan.result.boundingBox.ymin) / 10}%`,
-              }}><span>POSIBLE BACHE · {riskText[lastScan.result.hazardLevel]}</span></div>}
+              {scanning && (lastScan?.detections || (lastScan?.result.isPothole ? [lastScan.result] : [])).map((detection, index) => detection.boundingBox && <div key={index} className="detection-box" style={{
+                left: `${detection.boundingBox.xmin / 10}%`, top: `${detection.boundingBox.ymin / 10}%`,
+                width: `${(detection.boundingBox.xmax - detection.boundingBox.xmin) / 10}%`,
+                height: `${(detection.boundingBox.ymax - detection.boundingBox.ymin) / 10}%`,
+              }}><span>BACHE {index + 1}{detection.confidence ? ` · ${Math.round(detection.confidence * 100)}%` : ''} · {riskText[detection.hazardLevel]}</span></div>)}
+              {scanning && !cameraReady && <div className="camera-preparing"><LoadingIndicator label="Preparando cámara…" /></div>}
               <div className="stage-top">
                 <span className={`live-tag ${scanning ? 'active' : ''}`}>
                   <span className="live-dot" /> {scanning ? 'EN VIVO' : 'CÁMARA LISTA'}
@@ -395,15 +404,15 @@ export default function App() {
                 <span className="stage-gps"><MapPin size={12} /> {location ? `GPS ±${Math.round(location.accuracy)} m` : 'GPS pendiente'}</span>
               </div>
               {scanning && (
-                <div className="stage-bottom"><Activity size={15} /> {analyzing ? 'Analizando fotograma con IA…' : lastCheck ? `Último análisis: ${lastCheck}` : 'Buscando daños en la vía…'}</div>
+                <div className="stage-bottom">{analyzing ? <LoadingIndicator compact label="Analizando fotograma…" /> : <><Activity size={15} />{lastCheck ? `Último análisis: ${lastCheck}` : 'Buscando daños en la vía…'}</>}</div>
               )}
             </section>
 
             {error && <div className="message error"><AlertTriangle size={17} /><span>{error}</span><button onClick={() => setError('')} aria-label="Cerrar"><X size={16} /></button></div>}
             {locationError && scanning && <div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div>}
-            {locationError && scanning && <button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}><LocateFixed size={16} /> {requestingLocation ? 'Solicitando ubicación…' : 'Reintentar ubicación'}</button>}
+            {locationError && scanning && <button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}>{requestingLocation ? <LoadingIndicator compact label="Solicitando ubicación…" /> : <><LocateFixed size={16} /> Reintentar ubicación</>}</button>}
             {scanning && <div className="scan-feedback" role="status" aria-live="polite">
-              <strong>{analyzing ? 'Analizando la imagen…' : lastScan?.result.isPothole ? 'Daño detectado' : lastScan ? 'No se detectó daño en este fotograma' : 'Preparando cámara y GPS…'}</strong>
+              <strong>{analyzing ? 'Analizando la imagen…' : lastScan?.result.isPothole ? `${lastScan.detections?.length || 1} posibles daños detectados` : lastScan ? 'No se detectó daño en este fotograma' : 'Preparando cámara y GPS…'}</strong>
               <span>{scanCount} fotogramas analizados{lastCheck ? ` · ${lastCheck}` : ''}</span>
               {lastScan && !lastScan.result.isPothole && <p>Enfoca la vía, acerca el hueco y mantén el celular quieto. El escaneo continúa.</p>}
             </div>}
@@ -440,13 +449,14 @@ export default function App() {
               <div className="scan-note"><CirclePause size={15} /> {scanning ? 'La IA analiza el video continuamente y registra hallazgos.' : 'Sin fotos manuales. Necesitas internet, cámara y GPS.'}</div>
             </section>
 
+            {activeTrip && !activeTrip.endedAt && <section className="journey-preview"><h2>Tu recorrido en vivo</h2><p className="section-description">La línea sigue el GPS y los marcadores muestran los baches guardados. Se actualiza durante el escaneo.</p><div className="map-frame"><Suspense fallback={<LoadingIndicator label="Preparando mapa…" />}><ReportMap reports={activeTrip.reports || []} location={location} trip={activeTrip} /></Suspense></div></section>}
             <div className="feature-strip">
               <div><span className="feature-icon"><Radar size={17} /></span><strong>Detección</strong><small>Automática</small></div>
               <div><span className="feature-icon"><ShieldAlert size={17} /></span><strong>Riesgo</strong><small>Orientativo</small></div>
               <div><span className="feature-icon"><Compass size={17} /></span><strong>Zona</strong><small>Por GPS</small></div>
             </div>
             <p className="safety-copy">Usa la aplicación desde un lugar seguro. No manipules el celular mientras conduces.</p>
-            {health && <p className="service-status">{health.geminiConfigured ? 'Gemini + respaldo local' : 'Detector local gratuito'} · PostgreSQL · {health.tables} tablas</p>}
+            {health && <p className="service-status">Servicio disponible · Tu sesión está activa</p>}
           </div>
         )}
 
@@ -454,11 +464,13 @@ export default function App() {
           <div className="page map-page">
             <div className="page-heading"><div><span className="eyebrow">MAPA COMUNITARIO</span><h1>El estado de <em>nuestras vías.</em></h1></div><button className="icon-button" disabled={loadingReports} onClick={() => void refreshReports()} aria-label="Actualizar reportes"><RefreshCw size={19} /></button></div>
             <label className="map-risk-filter">Mostrar riesgo<select value={mapRisk} onChange={event => { setMapRisk(event.target.value); setMapFocus(null); setPatrol(null); }}><option value="">Todos los niveles</option>{Object.entries(riskText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <div className="map-frame"><Suspense fallback={<div className="map-loading" role="status">Preparando mapa…</div>}><ReportMap reports={reports.filter(report => !mapRisk || report.hazardLevel === mapRisk)} location={location} focus={mapFocus || patrol} onSelect={setMapFocus} /></Suspense></div>
+            <p className="section-description">Los marcadores muestran posibles daños registrados. Toca uno para ver su ubicación y riesgo. Puedes filtrar el riesgo, centrar tu ubicación o recorrer los reportes por prioridad.</p>
+            <div className="map-frame"><Suspense fallback={<div className="map-loading"><LoadingIndicator label="Preparando mapa…" /></div>}><ReportMap reports={reports.filter(report => !mapRisk || report.hazardLevel === mapRisk)} location={location} focus={mapFocus || patrol} onSelect={setMapFocus} /></Suspense></div>
             {mapFocus && <ReportCard report={mapFocus} />}
-            {locationError && <><div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div><button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}><LocateFixed size={16} /> {requestingLocation ? 'Solicitando ubicación…' : 'Reintentar ubicación'}</button></>}
+            {locationError && <><div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div><button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}>{requestingLocation ? <LoadingIndicator compact label="Solicitando ubicación…" /> : <><LocateFixed size={16} /> Reintentar ubicación</>}</button></>}
             <div className="map-legend"><span><i className="legend-dot critical" /> Crítico</span><span><i className="legend-dot high" /> Alto</span><span><i className="legend-dot low" /> Menor</span><span><i className="legend-dot you" /> Tú</span></div>
             <div className="patrol-controls"><button className="button-secondary" disabled={patrolBusy || !reports.length || Boolean(mapRisk)} onClick={() => void patrolStep('previous')}>Anterior</button><span>{mapRisk ? 'Quita el filtro para recorrer todos' : 'Recorrido por prioridad'}</span><button className="button-secondary" disabled={patrolBusy || !reports.length || Boolean(mapRisk)} onClick={() => void patrolStep('next')}>Siguiente</button></div>
+            {patrolBusy && <LoadingIndicator compact label="Buscando el siguiente reporte…" />}
             {patrol && !mapFocus && <ReportCard report={patrol} />}
             <div className="section-row"><h2>{location ? 'A menos de 5 km' : 'Reportes registrados'}</h2><span>{totalReports} en plataforma</span></div>
             {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
@@ -474,6 +486,7 @@ export default function App() {
           <div className="page reports-page">
             <div className="page-heading"><div><span className="eyebrow">REGISTRO CIUDADANO</span><h1>Cada reporte <em>cuenta.</em></h1></div><button className="icon-button" disabled={loadingReports} onClick={() => void refreshReports()} aria-label="Actualizar reportes"><RefreshCw size={19} /></button></div>
             <div className="summary-card"><div className="summary-art"><Activity size={40} /></div><div><small>REPORTES EN LA PLATAFORMA</small><strong>{totalReports}</strong><span>Visibles para la comunidad</span></div></div>
+            <p className="section-description">Busca un lugar, filtra por tipo de daño o riesgo y abre sus detalles. «Ver ubicación en mapa» muestra dónde fue registrado. Puedes guardar favoritos o exportar los resultados cargados.</p>
             <ReportSummary reports={reports} total={totalReports} />
             <div className="report-filter"><button className={sort === 'recent' ? 'button-primary' : 'button-secondary'} onClick={() => { setSort('recent'); void refreshReports('recent'); }}>Recientes</button><button className={sort === 'priority' ? 'button-primary' : 'button-secondary'} onClick={() => { setSort('priority'); void refreshReports('priority'); }}>Mayor riesgo</button></div>
             <div className="section-row"><h2>Actividad registrada</h2><span>{loadingReports ? 'Actualizando…' : `${reports.length} cargados`}</span></div>
@@ -486,19 +499,22 @@ export default function App() {
         )}
         {tab === 'structures' && <div className="page structures-page">
           <div className="page-heading"><div><span className="eyebrow">ESTRUCTURAS DE DATOS</span><h1>Así funciona <em>BacheScan.</em></h1></div></div>
-          <p className="precision-note">TypeScript en el celular · API Python · PostgreSQL con 43 tablas. Los datos se guardan en la base; estas estructuras organizan el trabajo en ejecución.</p>
+          <p className="section-description">Aquí puedes conocer cómo se organiza el trabajo de BacheScan. Las listas ordenan el historial, las colas procesan los análisis y la pila permite volver a una sección anterior.</p>
           {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
-          {!structures && !error && <p className="precision-note">Cargando estadísticas…</p>}
+          {!structures && !error && <LoadingIndicator label="Cargando información…" />}
           {structures && Object.entries(structures).filter(([, value]) => typeof value !== 'string').map(([key, value]) => {
             const stat = value as { size?: number; use: string };
             return <article className="structure-card" key={key}><Code2 size={20} /><div><strong>{structureLabels[key] || key}</strong><p>{stat.use}</p></div><span>{key === 'stack' ? historySize : stat.size ?? '↔'}</span></article>;
           })}
         </div>}
 
+        {tab === 'trips' && <div className="page trips-page"><div className="page-heading"><div><span className="eyebrow">TUS CAMINOS GUARDADOS</span><h1>Mis <em>recorridos.</em></h1></div></div><p className="section-description">Consulta tus recorridos de A a B. Cada uno conserva la trayectoria GPS y los baches que se registraron durante el escaneo. Solo tu cuenta puede consultar estos caminos.</p><Suspense fallback={<LoadingIndicator label="Cargando recorridos…" />}><TripHistory /></Suspense></div>}
         <nav className="bottom-nav" aria-label="Navegación principal">
+          <button className={tab === 'home' ? 'selected' : ''} aria-current={tab === 'home' ? 'page' : undefined} onClick={() => navigate('home')}><Home size={22} /><span>Inicio</span></button>
           <button className={tab === 'scan' ? 'selected' : ''} aria-current={tab === 'scan' ? 'page' : undefined} onClick={() => navigate('scan')}><ScanLine size={22} /><span>Escanear</span></button>
           <button className={tab === 'map' ? 'selected' : ''} aria-current={tab === 'map' ? 'page' : undefined} onClick={() => navigate('map')}><MapPin size={22} /><span>Mapa</span></button>
           <button className={tab === 'reports' ? 'selected' : ''} aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => navigate('reports')}><Route size={22} /><span>Reportes</span></button>
+          <button className={tab === 'trips' ? 'selected' : ''} aria-current={tab === 'trips' ? 'page' : undefined} onClick={() => navigate('trips')}><Route size={22} /><span>Recorridos</span></button>
           <button className={tab === 'structures' ? 'selected' : ''} aria-current={tab === 'structures' ? 'page' : undefined} onClick={() => navigate('structures')}><Code2 size={22} /><span>Estructuras</span></button>
         </nav>
       </main>

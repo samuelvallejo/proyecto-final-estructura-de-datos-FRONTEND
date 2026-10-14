@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
-:root{font-family:'DM Sans',sans-serif;color:#f7f8f2;background:#0b1512;font-synthesis:none}
+:root{font-family:'DM Sans',sans-serif;color:#183b2a;background:#f4f7ef;font-synthesis:none}
 *{box-sizing:border-box}body{margin:0;min-width:320px}button{font:inherit;cursor:pointer}button:disabled{cursor:not-allowed;opacity:.52}h1,h2,h3,p{margin:0}
 .app-shell{min-height:100svh;display:flex;justify-content:center;background:radial-gradient(circle at 12% 20%,#193f31 0,transparent 29%),radial-gradient(circle at 87% 80%,#1d3128 0,transparent 35%),#0a1410;position:relative}
 .desktop-glow{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#fff1 1px,transparent 1px),linear-gradient(90deg,#fff1 1px,transparent 1px);background-size:38px 38px;mask-image:radial-gradient(circle,#0005,transparent 68%)}

@@ -38,7 +38,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
   return <section className="report-explorer" aria-label="Explorar reportes">
     <div className="explorer-controls">
       <label className="search-control"><span><Search size={15} /> Buscar reportes</span>
-        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Calle, barrio, ciudad, daño o ID" /></label>
+        <input type="search" maxLength={120} aria-describedby="report-search-help" value={query} onChange={event => setQuery(event.target.value.slice(0,120))} placeholder="Calle, barrio, ciudad o daño" /></label>
       <div className="explorer-selects">
         <label>Nivel de riesgo<select value={risk} onChange={event => setRisk(event.target.value)}><option value="">Todos los niveles</option>{Object.entries(riskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Tipo de daño<select value={damage} onChange={event => setDamage(event.target.value)}><option value="">Todos los daños</option>{Object.entries(damageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -46,6 +46,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
       <label className="favorite-filter"><input type="checkbox" checked={favoritesOnly} onChange={event => setFavoritesOnly(event.target.checked)} /> Solo favoritos de este navegador</label>
       <div className="explorer-actions"><button className="button-secondary" disabled={!filtered} onClick={reset}>Limpiar filtros</button><button className="button-primary" disabled={!visible.length || loading} onClick={download}><Download size={15} /> Exportar CSV</button></div>
     </div>
+    <p className="form-help" id="report-search-help">Busca por calle, barrio, ciudad o daño: máximo 120 caracteres. Los filtros solo usan los reportes cargados. Elige un riesgo o tipo de daño para reducir los resultados; «Limpiar filtros» vuelve a mostrarlos todos.</p>
     <p className="explorer-count" role="status">{loading ? 'Actualizando reportes…' : `${visible.length} resultados de ${reports.length} cargados · ${total} en plataforma`}</p>
     {total > reports.length && <p className="explorer-help">Los filtros y el CSV incluyen los reportes cargados. Usa «Cargar más reportes» para ampliar la búsqueda.</p>}
     {notice && <p className="explorer-help" role="status">{notice}</p>}
@@ -57,7 +58,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
       <small>{new Date(report.timestamp).toLocaleString('es-CO')} · Riesgo {report.hazardScore}/100 · Sin verificar</small>
       <details><summary>Ver detalles del reporte</summary><p>{report.aiDescription || 'Sin descripción disponible.'}</p>
         {report.riskFactors.length > 0 && <ul>{report.riskFactors.map((factor, index) => <li key={index}>{factor}</li>)}</ul>}
-        <p>GPS: {report.location.lat.toFixed(6)}, {report.location.lng.toFixed(6)} · ±{Math.round(report.location.accuracy)} m</p><p className="report-id">ID: {report.id}</p></details>
+        <p>GPS: {report.location.lat.toFixed(6)}, {report.location.lng.toFixed(6)} · ±{Math.round(report.location.accuracy)} m</p></details>
       <button className="button-secondary" onClick={() => onMap(report)}><MapPin size={15} /> Ver ubicación en mapa</button>
     </article>)}
   </section>;

@@ -1,59 +1,40 @@
 import type { Health, Position, Report, ReportsPage, ScanResponse, StructureStats } from '../types';
 
-const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
-  try { response = await fetch(`${base}/api${path}`, init); }
+  try { response = await fetch(`/api${path}`, { ...init, credentials: 'include', cache: 'no-store' }); }
   catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
     throw new Error('No se puede conectar con el servidor. Comprueba tu conexión.');
   }
   if (!response.headers.get('content-type')?.includes('application/json')) {
-    throw new Error('La API respondió un contenido inesperado. Revisa VITE_API_URL y el despliegue del backend.');
+    throw new Error('No se pudo completar la operación. Inténtalo de nuevo.');
   }
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(body.error || body.detail || 'Ocurrió un error al procesar la solicitud.', response.status);
+  if (!response.ok) {
+    if (response.status === 401 && !path.startsWith('/auth/')) window.dispatchEvent(new Event('bachescan-session-expired'));
+    throw new ApiError(response.status === 429 ? 'No se pudo completar la operación. Espera un momento e inténtalo de nuevo.' : 'No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.', response.status);
+  }
   return body as T;
 }
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) { super(message); this.status = status; }
 }
-let tokenRequest: Promise<string> | null = null;
-let memorySession: { token: string; expiresAt: number } | null = null;
-function savedSession(): { token: string; expiresAt: number } | null {
-  try { return JSON.parse(localStorage.getItem('bachescan-session') || 'null') || memorySession; } catch { return memorySession; }
-}
-async function sessionToken(signal: AbortSignal): Promise<string> {
-  const saved = savedSession();
-  if (saved && saved.expiresAt > Date.now() + 60000) return saved.token;
-  if (!tokenRequest) {
-    tokenRequest = request<{ token: string; expiresAt: number }>('/sessions', { method: 'POST', signal })
-      .then(session => {
-        memorySession = session;
-        try { localStorage.setItem('bachescan-session', JSON.stringify(session)); } catch { /* Navegador privado */ }
-        return session.token;
-      }).finally(() => { tokenRequest = null; });
-  }
-  return tokenRequest;
-}
-export async function scanFrame(frame: Blob, location: Position | null, signal: AbortSignal): Promise<ScanResponse> {
+export const authStatus = () => request<{ authenticated: boolean }>('/auth/session');
+export const authenticate = (email: string, password: string) => request('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+export const registerAccount = (displayName: string, email: string, password: string, confirmPassword: string) => request('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName, email, password, confirmPassword }) });
+export const endSession = () => request('/auth/logout', { method: 'POST' });
+export async function scanFrame(frame: Blob, location: Position | null, signal: AbortSignal, tripId?: string): Promise<ScanResponse> {
   const form = new FormData();
   form.append('frame', frame, 'fotograma.jpg');
+  if (tripId) form.append('tripId', tripId);
   if (location && (!location.capturedAt || Date.now() - location.capturedAt < 15000)) {
     form.append('lat', String(location.lat));
     form.append('lng', String(location.lng));
     form.append('accuracy', String(location.accuracy));
   }
-  const token = await sessionToken(signal);
-  try { return await request<ScanResponse>('/scan', { method: 'POST', body: form, signal, headers: { Authorization: `Bearer ${token}` } }); }
-  catch (cause) {
-    if (cause instanceof ApiError && cause.status === 401) {
-      memorySession = null;
-      try { localStorage.removeItem('bachescan-session'); } catch { /* Sin almacenamiento */ }
-    }
-    throw cause;
-  }
+  return request<ScanResponse>('/scan', { method: 'POST', body: form, signal });
 }
 export async function loadReports(mode: 'recent' | 'priority' = 'recent', offset = 0): Promise<ReportsPage> {
   return request<ReportsPage>(`/reports${mode === 'priority' ? '/priority' : ''}?limit=100&offset=${offset}`);

@@ -1,6 +1,7 @@
 export type HazardLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface BoundingBox { ymin: number; xmin: number; ymax: number; xmax: number }
 export interface ScanResult {
+  confidence?: number;
   isPothole: boolean;
   potholeType: 'BACHE' | 'HUNDIMIENTO' | 'GRIETA' | 'OTRO_DANO' | null;
   hazardScore: number;
@@ -18,6 +19,8 @@ export interface Report extends ScanResult {
   status: 'UNVERIFIED';
 }
 export interface ScanResponse {
+  detections?: (ScanResult & { confidence?: number; report: Report | null; existing: boolean })[];
+  reports?: Report[];
   result: ScanResult;
   provider: 'gemini' | 'local-yolo';
   fallback?: boolean;
@@ -27,6 +30,7 @@ export interface ScanResponse {
   locationNote: string | null;
 }
 export interface ReportsPage { reports: Report[]; total: number; hasMore: boolean }
-export interface Health { status: string; storage: string; tables: number; reports: number; geminiConfigured: boolean; aiProvider: string; localModelReady: boolean }
+export interface Health { status: string }
+export interface Trip { id: string; name: string; pointA: string; pointB: string; start: Position; end: Position | null; startedAt: number; endedAt: number | null; reportCount: number; path?: Position[]; reports?: Report[] }
 export interface StructureStat { size?: number; use: string; runningAndQueued?: number }
 export type StructureStats = Record<string, StructureStat | string>;

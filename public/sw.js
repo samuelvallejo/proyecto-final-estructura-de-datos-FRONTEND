@@ -1,4 +1,4 @@
-const CACHE = 'bachescan-shell-v3';
+const CACHE = 'bachescan-shell-v4';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', event => {
   self.skipWaiting();
