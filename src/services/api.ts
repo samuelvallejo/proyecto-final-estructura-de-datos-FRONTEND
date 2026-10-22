@@ -13,7 +13,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith('/auth/')) window.dispatchEvent(new Event('bachescan-session-expired'));
-    throw new ApiError(response.status === 429 ? 'No se pudo completar la operación. Espera un momento e inténtalo de nuevo.' : 'No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.', response.status);
+    const body = await response.json().catch(() => ({})) as { error?: string };
+    throw new ApiError(body.error || (response.status === 429 ? 'No se pudo completar la operación. Espera un momento e inténtalo de nuevo.' : 'No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'), response.status);
   }
   return body as T;
 }
