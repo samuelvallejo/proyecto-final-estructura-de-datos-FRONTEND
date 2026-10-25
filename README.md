@@ -33,6 +33,10 @@ Ejecuta `npm ci` y `npm run dev`. Vite reenvía `/api` al backend Python de `htt
 
 Los recuadros muestran múltiples detecciones YOLO, su confianza y el nivel de riesgo visual. La posición corresponde al GPS del teléfono con su precisión; no es una medición exacta individual del bache. El video se analiza por fotogramas muestreados, no cada fotograma. El sistema requiere internet y debe permanecer abierto. La operación real en moto necesita pruebas en campo; configura y fija el teléfono antes de conducir, sin manipularlo en movimiento.
 
+## Verificacion
+
+El flujo de control de calidad del frontend se ejecuta con `npm run lint`, `npm test` y `npm run build`, y se integra en GitHub Actions sobre `main`.
+
 ## Errores, pruebas y control de calidad
 
 Si un componente falla al renderizar, el `src/components/ErrorBoundary.tsx` muestra una salida segura con opción de reintento en lugar de dejar la pantalla en blanco.
