@@ -71,6 +71,7 @@ export function validateTreeSnapshot(value: TreeSnapshot): TreeSnapshot {
     || value.binary.traversal.reportIds.length !== ids.size
     || new Set(value.binary.traversal.reportIds).size !== ids.size
     || value.binary.traversal.reportIds.some(id => !ids.has(id))
+    || (value.binary.rootId === null) !== (nodes.size === 0)
     || value.binary.rootId !== null && !nodes.has(value.binary.rootId)) invalid();
   for (const node of value.binary.nodes) {
     if (!ids.has(node.id) || !Number.isFinite(node.score) || node.score < 0 || node.score > 100
