@@ -24,3 +24,8 @@ test('enlaces izquierdos de valores menores', () => {
 test('enlaces derechos de valores mayores', () => {
   const tree=example();assert.equal(tree.root?.right?.key,7);assert.equal(tree.root?.right?.right?.key,8);
 });
+
+
+test('actualizacion de una clave sin aumentar el peso', () => {
+  const tree=example();assert.equal(tree.insert(3,'nuevo'),false);assert.equal(tree.search(3),'nuevo');assert.equal(tree.size,7);
+});
