@@ -27,3 +27,13 @@ export class BinarySearchTree<K, V> {
       current = child;
     }
   }
+
+  findNode(key: K): TreeNode<K, V> | null {
+    let current = this.root;
+    while (current) {
+      const comparison = this.compare(key, current.key);
+      if (comparison === 0) return current;
+      current = comparison < 0 ? current.left : current.right;
+    }
+    return null;
+  }
