@@ -34,3 +34,8 @@ test('actualizacion de una clave sin aumentar el peso', () => {
 test('busqueda de descendientes y claves ausentes', () => {
   const tree=example();assert.equal(tree.search(1),'1');assert.equal(tree.search(8),'8');assert.equal(tree.search(99),undefined);
 });
+
+
+test('pertenencia de un valor undefined', () => {
+  const tree=new BinarySearchTree<number,undefined>((a,b)=>a-b);tree.insert(1,undefined);assert.equal(tree.contains(1),true);assert.equal(tree.contains(2),false);
+});
