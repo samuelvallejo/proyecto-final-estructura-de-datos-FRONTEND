@@ -294,3 +294,8 @@ test('rechazo de identificadores duplicados en recorridos', () => {
 test('rechazo de un hijo binario ajeno al arbol', () => {
   const value=snapshot();value.binary.nodes[0].leftId='missing';assert.throws(()=>validateTreeSnapshot(value));
 });
+
+
+test('rechazo de una rama geografica con nivel incorrecto', () => {
+  const value=snapshot();value.geography.nodes[1].level=5;assert.throws(()=>validateTreeSnapshot(value));
+});
