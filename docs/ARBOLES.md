@@ -20,3 +20,14 @@ Los filtros de búsqueda, favoritos y exportación siguen usando la muestra carg
 Escribe mínimo y máximo entre 0 y 100 y pulsa «Consultar árbol». Los campos eliminan caracteres ajenos a dígitos y limitan el valor a 100 mientras escribes. El mínimo no puede superar al máximo.
 
 Un intervalo inválido muestra una explicación antes de enviar una petición. El backend vuelve a validar los parámetros. Estos límites describen puntuaciones orientativas, no una medición física del bache.
+## Alcance de la consulta
+
+El explorador consulta hasta 200 reportes activos de mayor riesgo dentro del intervalo. La pantalla informa cuántos cargó, cuántos coinciden y cuántos activos hay en la plataforma. Los filtros de riesgo se aplican en PostgreSQL antes de seleccionar la muestra.
+
+Las métricas, búsquedas y recorridos se refieren a esos nodos. Cambiar el recorrido no convierte la muestra en todos los reportes de la base. Actualiza con «Consultar árbol» para obtener una instantánea nueva.
+
+## Leer el diagrama
+
+Cada círculo es un reporte y muestra su puntuación. La raíz aparece arriba. Sus hijos izquierdo y derecho siguen el orden de la clave compuesta: riesgo, fecha e identificador.
+
+El dibujo muestra hasta cuatro niveles para conservar legibilidad. Todos los nodos, incluso los que quedan fuera del dibujo, participan en las métricas y búsquedas. En celular puedes deslizar horizontalmente y usar «Centrar raíz».
