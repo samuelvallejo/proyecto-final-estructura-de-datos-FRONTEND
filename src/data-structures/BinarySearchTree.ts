@@ -84,3 +84,13 @@ export class BinarySearchTree<K, V> {
       if (node.left) pending.push([node.left, false]);
     }
   }
+
+  *levelOrder(): Generator<{ node: TreeNode<K, V>; level: number; parent: TreeNode<K, V> | null }> {
+    const pending = this.root ? [{ node: this.root, level: 1, parent: null as TreeNode<K, V> | null }] : [];
+    for (let cursor = 0; cursor < pending.length; cursor++) {
+      const item = pending[cursor];
+      yield item;
+      if (item.node.left) pending.push({ node: item.node.left, level: item.level + 1, parent: item.node });
+      if (item.node.right) pending.push({ node: item.node.right, level: item.level + 1, parent: item.node });
+    }
+  }
