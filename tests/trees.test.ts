@@ -229,3 +229,8 @@ test('orden ascendente y preservacion del orden original', () => {
 test('limite escrito de riesgo cien', () => {
   assert.equal(scoreInput('999'),'100');assert.equal(scoreInput('101'),'100');
 });
+
+
+test('entrada numerica sin letras ni separadores', () => {
+  assert.equal(scoreInput('a7b0'),'70');assert.equal(scoreInput(''), '');assert.equal(scoreInput('000'),'0');
+});
