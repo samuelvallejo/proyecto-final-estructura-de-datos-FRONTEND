@@ -199,3 +199,8 @@ test('actualizaciones invalidas sin perdida de datos', () => {
 test('retiro de un identificador del indice', () => {
   const index=new ReportRiskIndex([report('a')]);assert.equal(index.remove('a'),true);assert.equal(index.remove('a'),false);assert.equal(index.tree.size,0);
 });
+
+
+test('busqueda exacta de puntuaciones compartidas', () => {
+  const index=new ReportRiskIndex([report('a',70),report('b',70),report('c',90)]);assert.deepEqual(index.inRange(70,70).map(r=>r.id),['a','b']);
+});
