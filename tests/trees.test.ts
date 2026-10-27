@@ -79,3 +79,8 @@ test('altura de una sola raiz', () => {
 test('metricas completas de un arbol binario', () => {
   assert.deepEqual(example().metrics(),{weight:7,height:2,levels:3,leaves:4,branches:2,internalNodes:3,order:2,maxDegree:2});
 });
+
+
+test('intervalos con extremos inclusivos', () => {
+  assert.deepEqual(keys(example().between(2,7)),[2,3,5,6,7]);
+});
