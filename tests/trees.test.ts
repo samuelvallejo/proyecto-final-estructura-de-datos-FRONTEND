@@ -169,3 +169,8 @@ test('recorridos de un arbol vacio', () => {
 test('arbol profundo sin recursion', () => {
   const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(let n=0;n<1200;n++)tree.insert(n,n);assert.equal(tree.height,1199);assert.equal([...tree.postOrder()].length,1200);
 });
+
+
+test('comparacion de riesgo fecha e identificador', () => {
+  assert(compareRisk([70,1,'a'],[70,1,'b'])<0);assert(compareRisk([70,2,'a'],[70,1,'a'])>0);assert(compareRisk([20,99,'z'],[70,1,'a'])<0);
+});
