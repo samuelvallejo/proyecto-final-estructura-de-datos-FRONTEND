@@ -19,3 +19,9 @@ export class ReportRiskIndex {
     this.byId = new Map(reports.map(report => [report.id, report]));
     this.tree = BinarySearchTree.fromItems([...this.byId.values()].map(report => [reportKey(report), report]), compareRisk);
   }
+
+  upsert(report: Report): void {
+    const key = reportKey(report); const previous = this.byId.get(report.id);
+    if (previous) this.tree.remove(reportKey(previous));
+    this.byId.set(report.id, report); this.tree.insert(key, report);
+  }
