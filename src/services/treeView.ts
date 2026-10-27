@@ -36,3 +36,19 @@ export function placeReports(tree: PlaceReportTree, id: string): string[] {
   }
   return result;
 }
+
+export function binaryLayout(tree: BinaryReportTree, maxLevels = 4) {
+  const nodes = new Map(tree.nodes.map(node => [node.id, node]));
+  const result: { id: string; x: number; y: number; parentId: string | null }[] = [];
+  const pending: [string, number, number, number][] = tree.rootId ? [[tree.rootId, 0, 100, 1]] : [];
+  const seen = new Set<string>();
+  while (pending.length) {
+    const [id, left, right, level] = pending.pop()!;
+    const node = nodes.get(id); if (!node || seen.has(id) || level > maxLevels) continue;
+    seen.add(id); const x = (left + right) / 2;
+    result.push({ id, x, y: (level - 1) * 92 + 24, parentId: node.parentId });
+    if (node.rightId) pending.push([node.rightId, x, right, level + 1]);
+    if (node.leftId) pending.push([node.leftId, left, x, level + 1]);
+  }
+  return result;
+}
