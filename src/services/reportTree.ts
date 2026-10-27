@@ -30,3 +30,5 @@ export class ReportRiskIndex {
     const previous = this.byId.get(id); if (!previous) return false;
     this.byId.delete(id); return this.tree.remove(reportKey(previous));
   }
+
+  ordered(order: Traversal = 'descending'): Report[] { return [...this.tree.traverse(order)].map(node => node.value); }
