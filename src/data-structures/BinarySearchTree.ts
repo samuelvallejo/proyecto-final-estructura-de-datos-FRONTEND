@@ -111,3 +111,14 @@ export class BinarySearchTree<K, V> {
     for (const { level } of this.levelOrder()) height = Math.max(height, level - 1);
     return height;
   }
+
+  metrics() {
+    let leaves = 0; let branches = 0; let maxDegree = 0;
+    for (const { node, parent } of this.levelOrder()) {
+      const degree = Number(node.left !== null) + Number(node.right !== null);
+      leaves += Number(degree === 0); branches += Number(parent !== null && degree > 0);
+      maxDegree = Math.max(maxDegree, degree);
+    }
+    return { weight: this.size, height: this.height, levels: this.height + 1, leaves,
+      branches, internalNodes: this.size - leaves, order: 2, maxDegree };
+  }
