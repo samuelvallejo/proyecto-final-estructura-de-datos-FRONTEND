@@ -194,3 +194,8 @@ test('actualizaciones que mueven la clave de riesgo', () => {
 test('actualizaciones invalidas sin perdida de datos', () => {
   const index=new ReportRiskIndex([report('a',20)]);assert.throws(()=>index.upsert(report('a',101)));assert.equal(index.ordered()[0].hazardScore,20);
 });
+
+
+test('retiro de un identificador del indice', () => {
+  const index=new ReportRiskIndex([report('a')]);assert.equal(index.remove('a'),true);assert.equal(index.remove('a'),false);assert.equal(index.tree.size,0);
+});
