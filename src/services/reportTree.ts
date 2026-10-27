@@ -25,3 +25,8 @@ export class ReportRiskIndex {
     if (previous) this.tree.remove(reportKey(previous));
     this.byId.set(report.id, report); this.tree.insert(key, report);
   }
+
+  remove(id: string): boolean {
+    const previous = this.byId.get(id); if (!previous) return false;
+    this.byId.delete(id); return this.tree.remove(reportKey(previous));
+  }
