@@ -77,7 +77,10 @@ export function validateTreeSnapshot(value: TreeSnapshot): TreeSnapshot {
     if (!ids.has(node.id) || !Number.isFinite(node.score) || node.score < 0 || node.score > 100
       || !Number.isInteger(node.level) || node.level < 1 || node.level > 200
       || [node.leftId, node.rightId, node.parentId].some(id => id !== null && !nodes.has(id))
-      || binaryPath(value.binary, node.id).length !== node.level) invalid();
+      || binaryPath(value.binary, node.id).length !== node.level
+      || binaryPath(value.binary, node.id)[0] !== value.binary.rootId
+      || node.leftId !== null && nodes.get(node.leftId)?.parentId !== node.id
+      || node.rightId !== null && nodes.get(node.rightId)?.parentId !== node.id) invalid();
   }
   const places = new Map(value.geography.nodes.map(node => [node.id, node]));
   if (places.size !== value.geography.nodes.length || !places.has(value.geography.rootId)) invalid();
