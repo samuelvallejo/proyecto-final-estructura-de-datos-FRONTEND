@@ -249,3 +249,8 @@ test('rechazo de ciclos en caminos recibidos', () => {
 test('posiciones simetricas del diagrama', () => {
   const layout=binaryLayout(snapshot().binary);assert.equal(layout.find(n=>n.id==='b')?.x,50);assert.equal(layout.find(n=>n.id==='a')?.x,25);assert.equal(layout.find(n=>n.id==='c')?.x,75);
 });
+
+
+test('limite de niveles dibujados', () => {
+  assert.equal(binaryLayout(snapshot().binary,1).length,1);assert.equal(binaryLayout(snapshot().binary,0).length,0);
+});
