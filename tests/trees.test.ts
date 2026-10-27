@@ -104,3 +104,8 @@ test('eliminacion inexistente sin alterar nodos', () => {
 test('eliminacion de hojas a ambos lados', () => {
   const tree=example();tree.remove(1);tree.remove(8);assert.equal(tree.root?.left?.left,null);assert.equal(tree.root?.right?.right,null);assert.equal(tree.validate(),true);
 });
+
+
+test('eliminacion de la ultima raiz', () => {
+  const tree=BinarySearchTree.fromItems([[1,1]],(a:number,b:number)=>a-b);tree.remove(1);assert.equal(tree.root,null);assert.equal(tree.size,0);
+});
