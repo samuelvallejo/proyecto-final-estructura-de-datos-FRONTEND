@@ -122,3 +122,15 @@ export class BinarySearchTree<K, V> {
     return { weight: this.size, height: this.height, levels: this.height + 1, leaves,
       branches, internalNodes: this.size - leaves, order: 2, maxDegree };
   }
+
+  trace(key: K): TreeNode<K, V>[] {
+    const result: TreeNode<K, V>[] = [];
+    let current = this.root;
+    while (current) {
+      result.push(current);
+      const comparison = this.compare(key, current.key);
+      if (comparison === 0) break;
+      current = comparison < 0 ? current.left : current.right;
+    }
+    return result;
+  }
