@@ -279,3 +279,8 @@ test('etiquetas sin direccion disponible', () => {
 test('aceptacion de un contrato de arbol valido', () => {
   const value=snapshot();assert.equal(validateTreeSnapshot(value),value);
 });
+
+
+test('rechazo de limites de muestra incoherentes', () => {
+  const value=snapshot();value.scope.loaded=99;assert.throws(()=>validateTreeSnapshot(value));
+});
