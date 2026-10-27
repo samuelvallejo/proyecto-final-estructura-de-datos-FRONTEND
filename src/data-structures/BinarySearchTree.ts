@@ -14,3 +14,16 @@ export class BinarySearchTree<K, V> {
   size = 0;
   readonly compare: Comparator<K>;
   constructor(compare: Comparator<K>) { this.compare = compare; }
+
+  insert(key: K, value: V): boolean {
+    if (!this.root) { this.root = new TreeNode(key, value); this.size = 1; return true; }
+    let current = this.root;
+    for (;;) {
+      const comparison = this.compare(key, current.key);
+      if (comparison === 0) { current.value = value; return false; }
+      const side = comparison < 0 ? 'left' : 'right';
+      const child = current[side];
+      if (!child) { current[side] = new TreeNode(key, value); this.size++; return true; }
+      current = child;
+    }
+  }
