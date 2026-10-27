@@ -109,3 +109,8 @@ test('eliminacion de hojas a ambos lados', () => {
 test('eliminacion de la ultima raiz', () => {
   const tree=BinarySearchTree.fromItems([[1,1]],(a:number,b:number)=>a-b);tree.remove(1);assert.equal(tree.root,null);assert.equal(tree.size,0);
 });
+
+
+test('promocion de un unico hijo izquierdo', () => {
+  const tree=new BinarySearchTree<number,number>((a,b)=>a-b);tree.insert(2,2);tree.insert(1,1);tree.remove(2);assert.equal(tree.root?.key,1);assert.equal(tree.validate(),true);
+});
