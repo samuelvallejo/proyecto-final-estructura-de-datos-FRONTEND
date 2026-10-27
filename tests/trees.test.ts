@@ -184,3 +184,8 @@ test('deduplicacion por identidad de reporte', () => {
 test('empates que no eliminan baches', () => {
   const index=new ReportRiskIndex([report('a',70),report('b',70)]);assert.deepEqual(index.ordered('inorder').map(r=>r.id),['a','b']);
 });
+
+
+test('actualizaciones que mueven la clave de riesgo', () => {
+  const index=new ReportRiskIndex([report('a',20),report('b',60)]);index.upsert(report('a',90));assert.deepEqual(index.ordered().map(r=>r.id),['a','b']);assert.equal(index.tree.size,2);
+});
