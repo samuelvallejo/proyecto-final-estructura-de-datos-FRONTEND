@@ -64,6 +64,10 @@ export function validateTreeSnapshot(value: TreeSnapshot): TreeSnapshot {
     || !Array.isArray(value.binary.nodes) || !Array.isArray(value.geography.nodes)
     || value.reports.length > 200 || value.binary.nodes.length !== value.reports.length
     || value.geography.nodes.length > 801 || value.scope.loaded !== value.reports.length) invalid();
+  if (!Number.isFinite(value.generatedAt) || !Number.isInteger(value.scope.loaded)
+    || value.scope.totalMatched < value.scope.loaded || value.scope.totalReports < value.scope.totalMatched
+    || value.scope.minScore < 0 || value.scope.maxScore > 100 || value.scope.minScore > value.scope.maxScore
+    || !Object.hasOwn(traversalText, value.binary.traversal.order)) invalid();
   const ids = new Set(value.reports.map(report => report.id));
   const nodes = new Map(value.binary.nodes.map(node => [node.id, node]));
   if (ids.size !== value.reports.length || nodes.size !== ids.size
