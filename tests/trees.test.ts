@@ -99,3 +99,8 @@ test('rechazo de intervalos invertidos', () => {
 test('eliminacion inexistente sin alterar nodos', () => {
   const tree=example();assert.equal(tree.remove(99),false);assert.equal(tree.size,7);
 });
+
+
+test('eliminacion de hojas a ambos lados', () => {
+  const tree=example();tree.remove(1);tree.remove(8);assert.equal(tree.root?.left?.left,null);assert.equal(tree.root?.right?.right,null);assert.equal(tree.validate(),true);
+});
