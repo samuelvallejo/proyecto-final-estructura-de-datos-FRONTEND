@@ -19,6 +19,7 @@ import PotholeSymbol from './components/PotholeSymbol';
 import useCommunityFeed from './hooks/useCommunityFeed';
 const TripHistory = lazy(() => import('./components/TripHistory'));
 const PhotoDetector = lazy(() => import('./components/PhotoDetector'));
+const TreeExplorer = lazy(() => import('./components/trees/TreeExplorer'));
 
 type Tab = 'home' | 'scan' | 'photo' | 'map' | 'reports' | 'structures' | 'trips';
 const structureLabels: Record<string, string> = {
