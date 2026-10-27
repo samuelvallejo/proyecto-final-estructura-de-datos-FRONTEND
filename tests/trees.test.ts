@@ -119,3 +119,8 @@ test('promocion de un unico hijo izquierdo', () => {
 test('promocion de un unico hijo derecho', () => {
   const tree=new BinarySearchTree<number,number>((a,b)=>a-b);tree.insert(1,1);tree.insert(2,2);tree.remove(1);assert.equal(tree.root?.key,2);assert.equal(tree.validate(),true);
 });
+
+
+test('sucesor profundo sin perder su hijo', () => {
+  const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(const n of [10,5,20,15,17,25])tree.insert(n,n);tree.remove(10);assert.deepEqual(keys(tree.inOrder()),[5,15,17,20,25]);assert.equal(tree.validate(),true);
+});
