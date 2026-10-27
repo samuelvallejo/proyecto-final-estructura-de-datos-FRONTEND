@@ -94,3 +94,14 @@ export class BinarySearchTree<K, V> {
       if (item.node.right) pending.push({ node: item.node.right, level: item.level + 1, parent: item.node });
     }
   }
+
+  traverse(order: Traversal = 'inorder'): Iterable<TreeNode<K, V>> {
+    switch (order) {
+      case 'inorder': return this.inOrder();
+      case 'descending': return this.reverseOrder();
+      case 'preorder': return this.preOrder();
+      case 'postorder': return this.postOrder();
+      case 'level': return [...this.levelOrder()].map(item => item.node);
+      default: throw new Error('Recorrido inválido');
+    }
+  }
