@@ -139,3 +139,8 @@ test('ultima escritura para claves duplicadas', () => {
 test('reequilibrado conservando todos los valores', () => {
   const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(let n=0;n<30;n++)tree.insert(n,n);tree.rebalance();assert.equal(tree.height,4);assert.deepEqual(keys(tree.inOrder()),Array.from({length:30},(_,n)=>n));
 });
+
+
+test('deteccion de ciclos', () => {
+  const tree=example();tree.root!.left!.left=tree.root;assert.equal(tree.validate(),false);
+});
