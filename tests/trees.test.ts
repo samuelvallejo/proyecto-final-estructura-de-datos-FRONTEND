@@ -114,3 +114,8 @@ test('eliminacion de la ultima raiz', () => {
 test('promocion de un unico hijo izquierdo', () => {
   const tree=new BinarySearchTree<number,number>((a,b)=>a-b);tree.insert(2,2);tree.insert(1,1);tree.remove(2);assert.equal(tree.root?.key,1);assert.equal(tree.validate(),true);
 });
+
+
+test('promocion de un unico hijo derecho', () => {
+  const tree=new BinarySearchTree<number,number>((a,b)=>a-b);tree.insert(1,1);tree.insert(2,2);tree.remove(1);assert.equal(tree.root?.key,2);assert.equal(tree.validate(),true);
+});
