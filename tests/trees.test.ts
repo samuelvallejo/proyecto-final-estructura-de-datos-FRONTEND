@@ -134,3 +134,8 @@ test('construccion equilibrada de doscientos nodos', () => {
 test('ultima escritura para claves duplicadas', () => {
   const tree=BinarySearchTree.fromItems([[2,'a'],[1,'b'],[2,'c']] as [number,string][],(a,b)=>a-b);assert.equal(tree.size,2);assert.equal(tree.search(2),'c');
 });
+
+
+test('reequilibrado conservando todos los valores', () => {
+  const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(let n=0;n<30;n++)tree.insert(n,n);tree.rebalance();assert.equal(tree.height,4);assert.deepEqual(keys(tree.inOrder()),Array.from({length:30},(_,n)=>n));
+});
