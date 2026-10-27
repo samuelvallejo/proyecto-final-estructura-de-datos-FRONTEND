@@ -7,3 +7,9 @@ export interface BinaryReportTree { rootId: string | null; nodes: BinaryReportNo
 
 export interface PlaceReportNode { id: string; label: string; kind: 'root' | 'city' | 'neighborhood' | 'street' | 'report'; level: number; parentId: string | null; childIds: string[]; reportId: string | null; reportCount: number; highestScore: number }
 export interface PlaceReportTree { rootId: string; nodes: PlaceReportNode[]; metrics: TreeMetrics }
+
+export interface TreeSnapshot {
+  generatedAt: number;
+  scope: { totalReports: number; totalMatched: number; loaded: number; limit: number; hasMore: boolean; minScore: number; maxScore: number; selection: 'highest-risk' };
+  binary: BinaryReportTree; geography: PlaceReportTree; reports: Report[];
+}
