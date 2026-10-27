@@ -41,3 +41,14 @@ export class BinarySearchTree<K, V> {
   search(key: K): V | undefined { return this.findNode(key)?.value; }
 
   contains(key: K): boolean { return this.findNode(key) !== null; }
+
+  *inOrder(): Generator<TreeNode<K, V>> {
+    const pending: TreeNode<K, V>[] = [];
+    let current = this.root;
+    while (current || pending.length) {
+      while (current) { pending.push(current); current = current.left; }
+      current = pending.pop()!;
+      yield current;
+      current = current.right;
+    }
+  }
