@@ -19,3 +19,8 @@ test('insercion de la raiz', () => {
 test('enlaces izquierdos de valores menores', () => {
   const tree=example();assert.equal(tree.root?.left?.key,2);assert.equal(tree.root?.left?.left?.key,1);
 });
+
+
+test('enlaces derechos de valores mayores', () => {
+  const tree=example();assert.equal(tree.root?.right?.key,7);assert.equal(tree.root?.right?.right?.key,8);
+});
