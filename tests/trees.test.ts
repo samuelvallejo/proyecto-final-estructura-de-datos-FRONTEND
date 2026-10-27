@@ -209,3 +209,8 @@ test('busqueda exacta de puntuaciones compartidas', () => {
 test('rechazo de riesgo no finito', () => {
   assert.throws(()=>reportKey(report('a',NaN)));assert.throws(()=>reportKey(report('a',Infinity)));
 });
+
+
+test('rechazo de fecha negativa', () => {
+  assert.throws(()=>reportKey(report('a',70,-1)));
+});
