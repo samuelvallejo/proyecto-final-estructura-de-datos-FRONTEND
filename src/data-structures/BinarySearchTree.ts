@@ -63,3 +63,13 @@ export class BinarySearchTree<K, V> {
       current = current.left;
     }
   }
+
+  *preOrder(): Generator<TreeNode<K, V>> {
+    const pending = this.root ? [this.root] : [];
+    while (pending.length) {
+      const node = pending.pop()!;
+      yield node;
+      if (node.right) pending.push(node.right);
+      if (node.left) pending.push(node.left);
+    }
+  }
