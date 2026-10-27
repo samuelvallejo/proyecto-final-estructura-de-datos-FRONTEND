@@ -99,3 +99,8 @@ La documentación docente enumera otros tipos de árboles. Esta adaptación impl
 Usa Node.js 24, ejecuta `npm ci` y `npm run dev`. El proxy local de Vite necesita la API Python disponible en el puerto 3001. En producción, `/api` continúa apuntando al backend de Railway mediante la configuración de Vercel.
 
 `npm test` ejecuta las pruebas de árbol con el ejecutor nativo de Node y sin dependencias nuevas. `npm run build` valida TypeScript y compila la aplicación; `npm run lint` revisa el código. Las pruebas cubren enlaces, recorridos, eliminación, rangos, empates, contratos y posiciones del diagrama.
+## Límites de la función
+
+El árbol es una instantánea de reportes, no un detector adicional. YOLO sigue analizando fotografías y fotogramas, y el GPS sigue aportando la ubicación. El riesgo visual y los avisos comunitarios mantienen su estado sin verificar.
+
+La muestra no se actualiza automáticamente mientras se consulta. Usa «Consultar árbol» después de publicar un aviso nuevo. Las alertas de cercanía conservan su actualización independiente. No hay borrado de datos del servidor desde el explorador de árboles.
