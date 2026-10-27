@@ -4,7 +4,7 @@ import {
   Crosshair, LocateFixed, MapPin, Radar, RefreshCw, Route, ScanLine,
   ShieldAlert, Sparkles, Square, X, Code2, ArrowLeft, Home,
 } from 'lucide-react';
-import { ApiError, loadHealth, loadNearby, loadReports, loadStructures, patrolReport, scanFrame } from './services/api';
+import { ApiError, loadHealth, loadReports, loadStructures, patrolReport, scanFrame } from './services/api';
 import type { Health, Position, Report, ScanResponse, StructureStats, Trip } from './types';
 import { Stack } from './data-structures/Stack';
 const ReportMap = lazy(() => import('./components/ReportMap'));
@@ -13,6 +13,10 @@ import ReportSummary from './components/ReportSummary';
 import ConnectionStatus from './components/ConnectionStatus';
 import LoadingIndicator from './components/LoadingIndicator';
 import TripPanel from './components/TripPanel';
+import CommunityReportForm from './components/CommunityReportForm';
+import NearbyHazards from './components/NearbyHazards';
+import PotholeSymbol from './components/PotholeSymbol';
+import useCommunityFeed from './hooks/useCommunityFeed';
 const TripHistory = lazy(() => import('./components/TripHistory'));
 const PhotoDetector = lazy(() => import('./components/PhotoDetector'));
 
@@ -78,7 +82,10 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
   const [sort, setSort] = useState<'recent' | 'priority'>('recent');
   const [health, setHealth] = useState<Health | null>(null);
   const [structures, setStructures] = useState<StructureStats | null>(null);
-  const [nearby, setNearby] = useState<Report[]>([]);
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const [communityRevision, setCommunityRevision] = useState(0);
+  const { reports: nearby, updatedAt: nearbyUpdatedAt, feedError } = useCommunityFeed(location, tab === 'map' || alertsEnabled, communityRevision);
+  const mapReports = [...reports, ...nearby.filter(item => !reports.some(report => report.id === item.id))];
   const [patrol, setPatrol] = useState<Report | null>(null);
   const [patrolBusy, setPatrolBusy] = useState(false);
   const history = useRef(new Stack<Tab>());
@@ -186,16 +193,9 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
       .catch(cause => { if (!controller.signal.aborted) setError((cause as Error).message); });
     return () => controller.abort();
   }, [tab]);
-  useEffect(() => {
-    if (tab !== 'map' || !location) return;
-    let cancelled = false;
-    void loadNearby(location).then(page => { if (!cancelled) setNearby(page.reports); })
-      .catch(cause => { if (!cancelled) setError((cause as Error).message); });
-    return () => { cancelled = true; };
-  }, [tab, location]);
 
   useEffect(() => {
-    if (!scanning && tab !== 'map') return;
+    if (!scanning && tab !== 'map' && !alertsEnabled) return;
     if (!navigator.geolocation) return;
     const id = navigator.geolocation.watchPosition(
       pos => {
@@ -220,7 +220,7 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     );
     return () => navigator.geolocation.clearWatch(id);
-  }, [scanning, tab, gpsRetry]);
+  }, [scanning, tab, gpsRetry, alertsEnabled]);
 
   useEffect(() => {
     if (!scanning || tab !== 'scan') return;
@@ -366,6 +366,7 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
           <button className="session-logout" disabled={logoutBusy} onClick={() => { stop(); onLogout(); }}>Cerrar sesión</button>
         </header>
         <ConnectionStatus health={health} busy={loadingReports} onRetry={() => { void refreshReports(); void loadHealth().then(setHealth).catch(() => setHealth(null)); }} />
+        <NearbyHazards enabled={alertsEnabled} onToggle={() => { if (!alertsEnabled) retryLocation(); setAlertsEnabled(value => !value); }} location={location} reports={nearby} updatedAt={nearbyUpdatedAt} feedError={feedError} onMap={showOnMap} />
         {historySize > 0 && <button className="back-link" onClick={goBack}><ArrowLeft size={15} /> Volver</button>}
 
         {tab === 'home' && <div className="page home-page"><section className="intro"><span className="eyebrow">TU COMUNIDAD, TU CAMINO</span><h1>Bienvenido a <em>BacheScan AI.</em></h1><p>Encuentra posibles baches con la cámara, ubícalos en el mapa y guarda tus recorridos. Elige qué quieres hacer.</p><p className="home-success" role="status">Todo se ejecutó correctamente.</p></section><div className="home-options"><button onClick={() => navigate('photo')}><Camera size={27} /><strong>Analizar una fotografía</strong><span>Carga una foto y mira los baches detectados, con recuadros y confianza.</span><ArrowRight size={20} /></button><button onClick={() => navigate('scan')}><Camera size={27} /><strong>Escanear una vía</strong><span>Abre la cámara para detectar daños y registrar un recorrido de A a B.</span><ArrowRight size={20} /></button><button onClick={() => navigate('map')}><MapPin size={27} /><strong>Consultar el mapa</strong><span>Revisa los lugares reportados y su nivel de riesgo visual.</span><ArrowRight size={20} /></button><button onClick={() => navigate('trips')}><Route size={27} /><strong>Mis recorridos</strong><span>Consulta tus caminos guardados y los baches encontrados.</span><ArrowRight size={20} /></button><button onClick={() => navigate('reports')}><ShieldAlert size={27} /><strong>Explorar reportes</strong><span>Busca por lugar o riesgo y consulta la información de cada hallazgo.</span><ArrowRight size={20} /></button></div><section className="getting-started"><h2>Tu primer recorrido, en tres pasos</h2><ol><li><b>Permite cámara y ubicación.</b> Acepta los permisos cuando el navegador los solicite.</li><li><b>Indica de dónde sales y a dónde vas.</b> Inicia el recorrido con buena señal GPS.</li><li><b>Finaliza al llegar.</b> El mapa conserva las posiciones y los hallazgos registrados.</li></ol><p className="form-help">La IA identifica posibles daños y estima su riesgo visual. Los reportes requieren verificación. Configura el teléfono antes de conducir y mantén la aplicación abierta.</p></section></div>}
@@ -468,8 +469,10 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
           <div className="page map-page">
             <div className="page-heading"><div><span className="eyebrow">MAPA COMUNITARIO</span><h1>El estado de <em>nuestras vías.</em></h1></div><button className="icon-button" disabled={loadingReports} onClick={() => void refreshReports()} aria-label="Actualizar reportes"><RefreshCw size={19} /></button></div>
             <label className="map-risk-filter">Mostrar riesgo<select value={mapRisk} onChange={event => { setMapRisk(event.target.value); setMapFocus(null); setPatrol(null); }}><option value="">Todos los niveles</option>{Object.entries(riskText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <p className="section-description">Los marcadores muestran posibles daños registrados. Toca uno para ver su ubicación y riesgo. Puedes filtrar el riesgo, centrar tu ubicación o recorrer los reportes por prioridad.</p>
-            <div className="map-frame"><Suspense fallback={<div className="map-loading"><LoadingIndicator label="Preparando mapa…" /></div>}><ReportMap reports={reports.filter(report => !mapRisk || report.hazardLevel === mapRisk)} location={location} focus={mapFocus || patrol} onSelect={setMapFocus} /></Suspense></div>
+            <p className="section-description">Los símbolos de huecos incluyen avisos de otros usuarios y detecciones con GPS. Activa las alertas para recibir una advertencia de cercanía. Los marcadores muestran posibles daños registrados. Toca uno para ver su ubicación y riesgo. Puedes filtrar el riesgo, centrar tu ubicación o recorrer los reportes por prioridad.</p>
+            <div className="map-frame"><Suspense fallback={<div className="map-loading"><LoadingIndicator label="Preparando mapa…" /></div>}><ReportMap reports={mapReports.filter(report => !mapRisk || report.hazardLevel === mapRisk)} location={location} focus={mapFocus || patrol} onSelect={setMapFocus} /></Suspense></div>
+            <div className="community-map-key"><PotholeSymbol size={30} /><span>Hueco reportado · Toca el símbolo para ver el aviso y su origen.</span></div>
+            <CommunityReportForm location={location} requestingLocation={requestingLocation} onLocate={retryLocation} onPublished={report => { setReports(current => [report, ...current.filter(item => item.id !== report.id)]); setMapFocus(report); setMapRisk(''); setCommunityRevision(value => value + 1); void refreshReports(); }} />
             {mapFocus && <ReportCard report={mapFocus} />}
             {locationError && <><div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div><button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}>{requestingLocation ? <LoadingIndicator compact label="Solicitando ubicación…" /> : <><LocateFixed size={16} /> Reintentar ubicación</>}</button></>}
             <div className="map-legend"><span><i className="legend-dot critical" /> Crítico</span><span><i className="legend-dot high" /> Alto</span><span><i className="legend-dot low" /> Menor</span><span><i className="legend-dot you" /> Tú</span></div>
@@ -533,7 +536,7 @@ function ReportCard({ report }: { report: Report }) {
     <div className="report-content">
       <div className="report-title"><strong>{typeText[report.potholeType || 'OTRO_DANO']}</strong><span className={`risk-label risk-${report.hazardLevel.toLowerCase()}`}>{riskText[report.hazardLevel]}</span></div>
       <p>{address || `GPS ${report.location.lat.toFixed(5)}, ${report.location.lng.toFixed(5)}`}</p>
-      <small>{timeText(report.timestamp)} · Riesgo {report.hazardScore}/100 · Sin verificar</small>
+      <small>{timeText(report.timestamp)} · {report.source === 'COMMUNITY' ? 'Comunidad' : 'YOLO'} · Riesgo {riskText[report.hazardLevel]} · Sin verificar</small>
     </div>
   </article>;
 }

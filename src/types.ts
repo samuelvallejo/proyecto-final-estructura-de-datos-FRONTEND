@@ -16,7 +16,8 @@ export interface Report extends ScanResult {
   timestamp: number;
   location: Position;
   zone: { street: string | null; neighborhood: string | null; city: string | null; fullAddress: string | null };
-  status: 'UNVERIFIED';
+  source?: 'COMMUNITY' | 'YOLO';
+  status: 'UNVERIFIED' | 'CONFIRMED' | 'IN_PROGRESS' | 'REPAIRED' | 'REJECTED';
 }
 export interface ScanResponse {
   detections?: (ScanResult & { confidence?: number; report: Report | null; existing: boolean })[];

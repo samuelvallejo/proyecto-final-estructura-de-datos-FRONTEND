@@ -52,6 +52,6 @@ export async function loadReports(mode: 'recent' | 'priority' = 'recent', offset
 }
 export const loadHealth = () => request<Health>('/health');
 export const loadStructures = () => request<StructureStats>('/data-structures/stats');
-export const loadNearby = (position: Position) => request<ReportsPage>(`/reports/nearby?lat=${position.lat}&lng=${position.lng}&radiusKm=5`);
+export const loadNearby = (position: Position, signal?: AbortSignal) => request<ReportsPage>(`/reports/nearby?lat=${position.lat}&lng=${position.lng}&radiusKm=5&limit=200`, { signal });
 export const patrolReport = (current?: string, direction: 'next' | 'previous' = 'next') =>
   request<{ report: Report | null; size: number }>(`/reports/patrol?direction=${direction}${current ? `&current=${encodeURIComponent(current)}` : ''}`);

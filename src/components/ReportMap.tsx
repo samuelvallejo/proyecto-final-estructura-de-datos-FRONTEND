@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import '../community.css';
 import type { Position, Report, Trip } from '../types';
 import { LocateFixed, Maximize2 } from 'lucide-react';
 
@@ -49,10 +50,10 @@ export default function ReportMap({ reports, location, focus, onSelect, trip }: 
     }
     const visibleReports = focus && !reports.some(report => report.id === focus.id) ? [...reports, focus] : reports;
     for (const report of visibleReports) {
-      const color = report.hazardScore >= 80 ? '#ff5f49' : report.hazardScore >= 60 ? '#ffad4f' : '#c8ed60';
+      const icon = L.divIcon({ className: 'pothole-map-icon', iconSize: [44, 44], iconAnchor: [22, 40], popupAnchor: [0, -35], html: `<span class="pothole-marker ${report.hazardLevel.toLowerCase()}"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 3 45 40a3 3 0 0 1-2.6 4.5H5.6A3 3 0 0 1 3 40L24 3Z" fill="#ffdc65" stroke="#773b16" stroke-width="2.5" stroke-linejoin="round"/><path d="m12 32 6-3 4 2 5-4 7 3 3 5-7 4-11-1-7-6Z" fill="#49372e"/><path d="m12 32 8 1 7-2 10 4M24 14v7" stroke="#fff9dc" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="25" r="1.5" fill="#773b16"/></svg></span>` });
       const popup = document.createElement('div');
       const title = document.createElement('strong');
-      title.textContent = report.potholeType === 'BACHE' ? 'Posible bache' : report.potholeType || 'Daño vial';
+      title.textContent = 'Este hueco es peligroso, cuidado';
       popup.append(title);
       const levels = { LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto', CRITICAL: 'Crítico' };
       for (const text of [
@@ -60,10 +61,11 @@ export default function ReportMap({ reports, location, focus, onSelect, trip }: 
         [report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', '),
         `${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}`,
         `GPS del celular ±${Math.round(report.location.accuracy)} m`,
-        'Evaluación visual de IA pendiente de verificación',
+        report.source === 'COMMUNITY' ? 'Aviso comunitario · Riesgo indicado por un usuario, sin verificar' : 'Detección YOLO · Riesgo visual sin verificar',
+        report.aiDescription,
       ].filter(Boolean)) { const line = document.createElement('div'); line.textContent = text; popup.append(line); }
-      const marker = L.circleMarker([report.location.lat, report.location.lng], {
-        radius: 10, color: '#10271f', weight: 3, fillColor: color, fillOpacity: 1,
+      const marker = L.marker([report.location.lat, report.location.lng], { icon,
+        title: 'Hueco reportado. Cuidado. Toca para ver detalles.', alt: 'Símbolo de hueco reportado',
       }).addTo(layer.current).bindPopup(popup);
       marker.on('click', () => onSelect?.(report));
       if (focus?.id === report.id) marker.openPopup();
@@ -78,13 +80,13 @@ export default function ReportMap({ reports, location, focus, onSelect, trip }: 
       }).addTo(layer.current).bindPopup('Ubicación aproximada de tu celular');
     }
     const reportIds = reports.map(report => report.id).join('|');
-    if (!trip && !focus && reports.length > 0 && fittedReportIds.current !== reportIds) {
+    if (!trip && !focus && !location && reports.length > 0 && fittedReportIds.current !== reportIds) {
       map.current.fitBounds(reports.map(item => [item.location.lat, item.location.lng] as L.LatLngTuple), {
         padding: [28, 28], maxZoom: 15, animate: false,
       });
       fittedReportIds.current = reportIds;
     }
-    if (!focus && location && !reports.length && !centeredLocation.current) { map.current.setView([location.lat, location.lng], 16, { animate: false }); centeredLocation.current = true; }
+    if (!trip && !focus && location && !centeredLocation.current) { map.current.setView([location.lat, location.lng], 16, { animate: false }); centeredLocation.current = true; }
   }, [reports, location, focus, onSelect, trip]);
   useEffect(() => {
     if (focus) map.current?.setView([focus.location.lat, focus.location.lng], 17, { animate: false });

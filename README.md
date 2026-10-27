@@ -36,3 +36,8 @@ Los recuadros muestran múltiples detecciones YOLO, su confianza y el nivel de r
 ## Secciones
 
 Inicio orienta al usuario con acciones y pasos. Escanear muestra cámara, detecciones, permisos y recorrido activo. Mapa explica marcadores y filtros. Reportes permite buscar (máximo 120 caracteres), filtrar, guardar favoritos y exportar los resultados cargados. Mis recorridos muestra únicamente caminos de la cuenta actual. Estructuras explica el uso de arrays, listas enlazadas, colas y pilas.
+
+
+## Avisos comunitarios y alertas de cercanía
+
+Desde **Mapa → Reportar un hueco aquí**, una persona puede publicar un aviso con su GPS actual, descripción y riesgo indicado. Otras cuentas lo ven con un símbolo de hueco. **Activar alertas** muestra «Este hueco es peligroso, cuidado» al estar a menos de 200 m. Los avisos se actualizan cada 15 segundos con la aplicación abierta y GPS permitido. La distancia y el riesgo son orientativos.
