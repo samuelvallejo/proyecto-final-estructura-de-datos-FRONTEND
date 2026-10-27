@@ -11,3 +11,11 @@ export function reportKey(report: Report): RiskKey {
     || !Number.isFinite(report.timestamp) || report.timestamp < 0 || !report.id) throw new Error('Reporte inválido');
   return [report.hazardScore, report.timestamp, report.id];
 }
+
+export class ReportRiskIndex {
+  readonly byId: Map<string, Report>;
+  readonly tree: BinarySearchTree<RiskKey, Report>;
+  constructor(reports: Report[]) {
+    this.byId = new Map(reports.map(report => [report.id, report]));
+    this.tree = BinarySearchTree.fromItems([...this.byId.values()].map(report => [reportKey(report), report]), compareRisk);
+  }
