@@ -42,3 +42,8 @@ El backend envía la secuencia de identificadores del recorrido y el cliente la 
 «Paso anterior» y «Paso siguiente» avanzan por la secuencia elegida. También puedes tocar un nodo del diagrama para seleccionarlo. La tarjeta inferior identifica el reporte, su origen y el acceso al mapa.
 
 El camino resaltado muestra qué nodos visita la búsqueda binaria desde la raíz hasta la selección. El contador de nodos visitados corresponde a ese camino, no a solicitudes HTTP independientes.
+## Buscar una puntuación
+
+«Buscar puntuación exacta» acepta de 0 a 100 y consulta el BST TypeScript dentro de la muestra. Si varios reportes tienen el mismo riesgo, aparecen todos. Seleccionar una coincidencia mueve el recorrido a ese reporte.
+
+La clave incluye fecha e identificador para conservar empates. Una búsqueda sin coincidencias muestra un estado vacío y no crea un reporte ni llama al modelo de visión.
