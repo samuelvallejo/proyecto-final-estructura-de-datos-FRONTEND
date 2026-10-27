@@ -269,3 +269,8 @@ test('rutas geograficas desconocidas', () => {
 test('etiquetas con ubicacion legible', () => {
   assert.equal(treeReportLabel(report('a',70)),'Riesgo 70/100 · Calle 1, Centro, Cali');
 });
+
+
+test('etiquetas sin direccion disponible', () => {
+  const value=report();value.zone={city:null,street:null,neighborhood:null,fullAddress:null};assert.match(treeReportLabel(value),/Ubicación GPS sin dirección/);
+});
