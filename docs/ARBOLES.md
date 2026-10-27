@@ -82,3 +82,15 @@ La interfaz muestra el indicador de carga del proyecto. En caso de fallo, ofrece
 El explorador requiere la sesión de la aplicación y usa el endpoint protegido de árboles. Los nodos y reportes contienen información vial compartida; no muestran el correo, contraseña o sesión del autor.
 
 Los recorridos privados A→B mantienen su acceso por propietario. Los árboles no envían imágenes a un servicio externo, no almacenan credenciales en el navegador y no añaden un inicio de sesión distinto.
+## Archivos principales
+
+| Archivo | Uso |
+| --- | --- |
+| `src/data-structures/BinarySearchTree.ts` | Node, raíz y operaciones del BST |
+| `src/services/reportTree.ts` | Claves y ordenamiento real de baches |
+| `src/services/treeView.ts` | Contrato, disposición visual y caminos |
+| `src/components/trees/TreeWorkspace.tsx` | Filtros, recorridos y selección |
+| `src/components/trees/PlaceTreeView.tsx` | Exploración por ubicaciones |
+| `src/hooks/useReportTree.ts` | Consulta y cancelación |
+
+La documentación docente enumera otros tipos de árboles. Esta adaptación implementa el BST del código de clase y una jerarquía general de ubicaciones; no presenta esas otras variantes como implementadas.
