@@ -31,3 +31,14 @@ Las métricas, búsquedas y recorridos se refieren a esos nodos. Cambiar el reco
 Cada círculo es un reporte y muestra su puntuación. La raíz aparece arriba. Sus hijos izquierdo y derecho siguen el orden de la clave compuesta: riesgo, fecha e identificador.
 
 El dibujo muestra hasta cuatro niveles para conservar legibilidad. Todos los nodos, incluso los que quedan fuera del dibujo, participan en las métricas y búsquedas. En celular puedes deslizar horizontalmente y usar «Centrar raíz».
+## Recorridos del árbol
+
+«En orden» recorre izquierdo, nodo y derecho; «Mayor a menor riesgo» invierte ese recorrido. Preorden empieza por la raíz; postorden la visita después de sus hijos. Por niveles visita primero los nodos más próximos a la raíz.
+
+El backend envía la secuencia de identificadores del recorrido y el cliente la valida antes de mostrarla. Cada recorrido conserva los mismos reportes de la instantánea.
+
+## Pasos y selección
+
+«Paso anterior» y «Paso siguiente» avanzan por la secuencia elegida. También puedes tocar un nodo del diagrama para seleccionarlo. La tarjeta inferior identifica el reporte, su origen y el acceso al mapa.
+
+El camino resaltado muestra qué nodos visita la búsqueda binaria desde la raíz hasta la selección. El contador de nodos visitados corresponde a ese camino, no a solicitudes HTTP independientes.
