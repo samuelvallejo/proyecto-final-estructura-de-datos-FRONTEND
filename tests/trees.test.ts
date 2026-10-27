@@ -144,3 +144,8 @@ test('reequilibrado conservando todos los valores', () => {
 test('deteccion de ciclos', () => {
   const tree=example();tree.root!.left!.left=tree.root;assert.equal(tree.validate(),false);
 });
+
+
+test('deteccion de claves fuera de su rama', () => {
+  const tree=example();tree.root!.left!.right!.key=99;assert.equal(tree.validate(),false);
+});
