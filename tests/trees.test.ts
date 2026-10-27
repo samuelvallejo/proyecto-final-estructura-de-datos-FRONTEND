@@ -94,3 +94,8 @@ test('intervalos vacios fuera del dominio', () => {
 test('rechazo de intervalos invertidos', () => {
   assert.throws(()=>[...example().between(7,2)]);
 });
+
+
+test('eliminacion inexistente sin alterar nodos', () => {
+  const tree=example();assert.equal(tree.remove(99),false);assert.equal(tree.size,7);
+});
