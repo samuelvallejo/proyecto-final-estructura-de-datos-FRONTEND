@@ -29,3 +29,8 @@ test('enlaces derechos de valores mayores', () => {
 test('actualizacion de una clave sin aumentar el peso', () => {
   const tree=example();assert.equal(tree.insert(3,'nuevo'),false);assert.equal(tree.search(3),'nuevo');assert.equal(tree.size,7);
 });
+
+
+test('busqueda de descendientes y claves ausentes', () => {
+  const tree=example();assert.equal(tree.search(1),'1');assert.equal(tree.search(8),'8');assert.equal(tree.search(99),undefined);
+});
