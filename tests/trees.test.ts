@@ -274,3 +274,8 @@ test('etiquetas con ubicacion legible', () => {
 test('etiquetas sin direccion disponible', () => {
   const value=report();value.zone={city:null,street:null,neighborhood:null,fullAddress:null};assert.match(treeReportLabel(value),/Ubicación GPS sin dirección/);
 });
+
+
+test('aceptacion de un contrato de arbol valido', () => {
+  const value=snapshot();assert.equal(validateTreeSnapshot(value),value);
+});
