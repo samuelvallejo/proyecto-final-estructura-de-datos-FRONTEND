@@ -159,3 +159,8 @@ test('vaciado y posterior reutilizacion', () => {
 test('caminos de busqueda encontrada y ausente', () => {
   assert.deepEqual(keys(example().trace(1)),[5,2,1]);assert.deepEqual(keys(example().trace(4)),[5,2,3]);
 });
+
+
+test('recorridos de un arbol vacio', () => {
+  const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(const order of Object.keys(traversalText))assert.deepEqual([...tree.traverse(order as keyof typeof traversalText)],[]);
+});
