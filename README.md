@@ -2,6 +2,14 @@
 
 Aplicación TypeScript/React en modo claro, con acceso obligatorio antes de mostrar las funcionalidades. Conserva los aportes e historial anteriores y añade autenticación, página de inicio, recorridos privados de A a B, múltiples detecciones YOLO y estados de carga con el logo.
 
+## Detección en fotografías
+
+Desde Inicio elige **Analizar una fotografía**, o desde Escanear cambia de Cámara en vivo a Analizar una fotografía. Puedes seleccionar o arrastrar JPEG, PNG o WebP estática de hasta 4 MB, lados de 32–8192 píxeles y hasta 16 megapíxeles. Se muestra una vista previa y el botón **Detectar baches**; durante el análisis aparece el logo de carga.
+
+El componente `src/components/PhotoDetector.tsx` llama a `POST /api/detect/potholes` con `multipart/form-data` (campo `image`) y la cookie de sesión. Las coordenadas en píxeles se convierten a porcentajes del tamaño original orientado, manteniendo los rectángulos alineados al redimensionar la imagen. Se muestran confianza, conteo y ausencia de detecciones. Los errores usan mensajes fijos y no exponen datos internos.
+
+Los pesos `.pt`, PyTorch y Ultralytics permanecen en el backend; no se descargan ni ejecutan en el navegador. La foto no inventa coordenadas GPS ni crea reportes en el mapa. La cámara y los recorridos continúan usando el modelo personalizado `best.pt` del backend. La clase del archivo es `0`, mapeada explícitamente a `pothole` por la configuración del servidor.
+
 ## Desarrollo
 
 Ejecuta `npm ci` y `npm run dev`. Vite reenvía `/api` al backend Python de `http://127.0.0.1:3001`. Configura allí PostgreSQL, `DATA_ENCRYPTION_KEY` privada y `SECURE_COOKIES=false` exclusivamente en desarrollo. En producción, Vercel reenvía `/api` a Railway mediante `vercel.json`, manteniendo las cookies en el mismo origen. Ya no se utiliza `VITE_API_URL`.
