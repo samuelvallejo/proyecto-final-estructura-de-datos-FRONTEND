@@ -49,3 +49,8 @@ test('ordenamiento del ejemplo del PDF', () => {
 test('orden descendente de claves', () => {
   assert.deepEqual(keys(example().reverseOrder()),[8,7,6,5,3,2,1]);
 });
+
+
+test('preorden con raiz primero', () => {
+  assert.deepEqual(keys(example().preOrder()),[5,2,1,3,7,6,8]);
+});
