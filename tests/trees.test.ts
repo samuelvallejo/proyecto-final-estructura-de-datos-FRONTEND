@@ -174,3 +174,8 @@ test('arbol profundo sin recursion', () => {
 test('comparacion de riesgo fecha e identificador', () => {
   assert(compareRisk([70,1,'a'],[70,1,'b'])<0);assert(compareRisk([70,2,'a'],[70,1,'a'])>0);assert(compareRisk([20,99,'z'],[70,1,'a'])<0);
 });
+
+
+test('deduplicacion por identidad de reporte', () => {
+  const index=new ReportRiskIndex([report('a',20),report('a',90)]);assert.equal(index.tree.size,1);assert.equal(index.ordered()[0].hazardScore,90);
+});
