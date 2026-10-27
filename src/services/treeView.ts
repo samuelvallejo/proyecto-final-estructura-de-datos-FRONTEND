@@ -24,3 +24,15 @@ export function binaryPath(tree: BinaryReportTree, id: string): string[] {
   }
   return result.reverse();
 }
+
+export function placeReports(tree: PlaceReportTree, id: string): string[] {
+  const nodes = new Map(tree.nodes.map(node => [node.id, node]));
+  const pending = [id]; const result: string[] = []; const seen = new Set<string>();
+  while (pending.length) {
+    const current = pending.pop()!; if (seen.has(current)) continue;
+    seen.add(current); const node = nodes.get(current); if (!node) continue;
+    if (node.reportId) result.push(node.reportId);
+    pending.push(...node.childIds.slice().reverse());
+  }
+  return result;
+}
