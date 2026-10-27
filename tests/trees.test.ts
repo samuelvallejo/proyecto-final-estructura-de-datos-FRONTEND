@@ -214,3 +214,8 @@ test('rechazo de riesgo no finito', () => {
 test('rechazo de fecha negativa', () => {
   assert.throws(()=>reportKey(report('a',70,-1)));
 });
+
+
+test('ordenamiento sin mutar el arreglo original', () => {
+  const values=[report('a',20),report('b',90)];assert.deepEqual(orderReports(values,'descending').map(r=>r.id),['b','a']);assert.deepEqual(values.map(r=>r.id),['a','b']);
+});
