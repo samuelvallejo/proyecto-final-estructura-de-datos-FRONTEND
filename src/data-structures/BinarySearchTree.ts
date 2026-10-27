@@ -187,3 +187,8 @@ export class BinarySearchTree<K, V> {
     }
     return tree;
   }
+
+  rebalance(): void {
+    const rebuilt = BinarySearchTree.fromItems([...this.inOrder()].map(node => [node.key, node.value]), this.compare);
+    this.root = rebuilt.root; this.size = rebuilt.size;
+  }
