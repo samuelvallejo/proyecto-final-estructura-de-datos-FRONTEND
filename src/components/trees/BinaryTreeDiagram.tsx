@@ -1,14 +1,19 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { BinaryReportTree } from '../../types/trees';
 import { binaryLayout } from '../../services/treeView';
 interface Props { tree: BinaryReportTree; selectedId: string | null; path: string[]; onSelect: (id: string) => void }
 export default function BinaryTreeDiagram({ tree, selectedId, path, onSelect }: Props) {
+  const viewport = useRef<HTMLDivElement>(null);
   const layout = useMemo(() => binaryLayout(tree), [tree]);
+  useEffect(() => {
+    const container = viewport.current;
+    if (container) container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
+  }, [tree.rootId]);
   const positions = new Map(layout.map(node => [node.id, node]));
   const nodes = new Map(tree.nodes.map(node => [node.id, node]));
   if (!tree.rootId) return <p className="tree-empty">No hay nodos en este intervalo de riesgo.</p>;
   const height = Math.max(...layout.map(node => node.y)) + 78;
-  return <div className="binary-scroll" tabIndex={0} aria-label="Diagrama del árbol binario. Desplaza horizontalmente para ver las ramas.">
+  return <div className="binary-scroll" ref={viewport} tabIndex={0} aria-label="Diagrama del árbol binario. Desplaza horizontalmente para ver las ramas.">
     <div className="binary-stage" style={{ height }}>
       <svg className="binary-links" width="100%" height={height} aria-hidden="true">{layout.map(node => {
         const parent = node.parentId ? positions.get(node.parentId) : null;
