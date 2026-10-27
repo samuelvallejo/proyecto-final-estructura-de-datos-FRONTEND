@@ -42,3 +42,8 @@ export class ReportRiskIndex {
     const report = this.byId.get(id); return report ? this.tree.trace(reportKey(report)).map(node => node.value.id) : [];
   }
 }
+
+export function orderReports(reports: Report[], order: 'original' | 'ascending' | 'descending'): Report[] {
+  if (order === 'original') return [...reports];
+  return new ReportRiskIndex(reports).ordered(order === 'ascending' ? 'inorder' : 'descending');
+}
