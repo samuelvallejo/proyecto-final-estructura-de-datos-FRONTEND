@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import '../trees.css';
 import { Download, MapPin, Search, Star } from 'lucide-react';
 import type { Report } from '../types';
 import { damageLabels, filterReports, reportsCsv, riskLabels } from '../services/reportTools';
