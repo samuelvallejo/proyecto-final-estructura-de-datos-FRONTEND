@@ -52,3 +52,8 @@ export function binaryLayout(tree: BinaryReportTree, maxLevels = 4) {
   }
   return result;
 }
+
+export function treeReportLabel(report: Report): string {
+  const place = [report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', ');
+  return `Riesgo ${report.hazardScore}/100 · ${place || 'Ubicación GPS sin dirección'}`;
+}
