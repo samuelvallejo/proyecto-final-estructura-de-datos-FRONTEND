@@ -52,3 +52,14 @@ export class BinarySearchTree<K, V> {
       current = current.right;
     }
   }
+
+  *reverseOrder(): Generator<TreeNode<K, V>> {
+    const pending: TreeNode<K, V>[] = [];
+    let current = this.root;
+    while (current || pending.length) {
+      while (current) { pending.push(current); current = current.right; }
+      current = pending.pop()!;
+      yield current;
+      current = current.left;
+    }
+  }
