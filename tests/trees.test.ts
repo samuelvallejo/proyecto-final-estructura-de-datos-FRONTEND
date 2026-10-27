@@ -259,3 +259,8 @@ test('limite de niveles dibujados', () => {
 test('recorrido de las hojas geograficas', () => {
   assert.deepEqual(placeReports(snapshot().geography,'root'),['a','b','c']);assert.deepEqual(placeReports(snapshot().geography,'ra'),['a']);
 });
+
+
+test('rutas geograficas desconocidas', () => {
+  assert.deepEqual(placeReports(snapshot().geography,'missing'),[]);
+});
