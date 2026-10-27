@@ -89,3 +89,8 @@ test('intervalos con extremos inclusivos', () => {
 test('intervalos vacios fuera del dominio', () => {
   assert.deepEqual(keys(example().between(20,30)),[]);
 });
+
+
+test('rechazo de intervalos invertidos', () => {
+  assert.throws(()=>[...example().between(7,2)]);
+});
