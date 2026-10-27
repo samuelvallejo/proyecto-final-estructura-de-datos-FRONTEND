@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, MapPin, Search, Star } from 'lucide-react';
 import type { Report } from '../types';
 import { damageLabels, filterReports, reportsCsv, riskLabels } from '../services/reportTools';
+import { orderReports } from '../services/reportTree';
 
 interface Props { reports: Report[]; total: number; loading: boolean; onMap: (report: Report) => void }
 const storageKey = 'bachescan-favorites-v1';
