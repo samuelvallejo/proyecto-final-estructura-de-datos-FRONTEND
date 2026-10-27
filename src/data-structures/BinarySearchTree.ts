@@ -73,3 +73,14 @@ export class BinarySearchTree<K, V> {
       if (node.left) pending.push(node.left);
     }
   }
+
+  *postOrder(): Generator<TreeNode<K, V>> {
+    const pending: [TreeNode<K, V>, boolean][] = this.root ? [[this.root, false]] : [];
+    while (pending.length) {
+      const [node, visited] = pending.pop()!;
+      if (visited) { yield node; continue; }
+      pending.push([node, true]);
+      if (node.right) pending.push([node.right, false]);
+      if (node.left) pending.push([node.left, false]);
+    }
+  }
