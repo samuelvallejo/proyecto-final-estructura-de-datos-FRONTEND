@@ -224,3 +224,8 @@ test('ordenamiento sin mutar el arreglo original', () => {
 test('orden ascendente y preservacion del orden original', () => {
   const values=[report('a',90),report('b',20)];assert.deepEqual(orderReports(values,'ascending').map(r=>r.id),['b','a']);assert.deepEqual(orderReports(values,'original'),values);assert.notEqual(orderReports(values,'original'),values);
 });
+
+
+test('limite escrito de riesgo cien', () => {
+  assert.equal(scoreInput('999'),'100');assert.equal(scoreInput('101'),'100');
+});
