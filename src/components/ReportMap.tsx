@@ -4,9 +4,11 @@ import 'leaflet/dist/leaflet.css';
 import '../community.css';
 import type { Position, Report, Trip } from '../types';
 import { LocateFixed, Maximize2 } from 'lucide-react';
+import type { GraphEdge } from '../types/graphs';
+import { edgeKey, pathEdges } from '../services/graphView';
 
-interface Props { reports: Report[]; location: Position | null; focus?: Report | null; onSelect?: (report: Report) => void; trip?: Trip | null }
-export default function ReportMap({ reports, location, focus, onSelect, trip }: Props) {
+interface Props { reports: Report[]; location: Position | null; focus?: Report | null; onSelect?: (report: Report) => void; trip?: Trip | null; connections?: GraphEdge[]; connectionPath?: string[] }
+export default function ReportMap({ reports, location, focus, onSelect, trip, connections, connectionPath }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -40,6 +42,20 @@ export default function ReportMap({ reports, location, focus, onSelect, trip }: 
   useEffect(() => {
     if (!map.current || !layer.current) return;
     layer.current.clearLayers();
+    if (connections) {
+      const byId = new Map(reports.map(report => [report.id, report]));
+      const selected = pathEdges(connectionPath || []);
+      // Dibujar primero conexiones de cercanía; nunca presentarlas como navegación vial.
+      const ordered = [...connections].sort((a, b) => Number(selected.has(edgeKey(a.source, a.target))) - Number(selected.has(edgeKey(b.source, b.target))));
+      for (const edge of ordered) {
+        const source = byId.get(edge.source), target = byId.get(edge.target);
+        if (!source || !target) continue;
+        const active = selected.has(edgeKey(edge.source, edge.target));
+        const hint = document.createElement('span'); hint.textContent = `Cercanía geográfica: ${Math.round(edge.distanceMeters)} m. No representa una calle.`;
+        L.polyline([[source.location.lat, source.location.lng], [target.location.lat, target.location.lng]],
+          { color: active ? '#277346' : '#8b9c7c', weight: active ? 5 : 2, opacity: active ? .95 : .4, dashArray: active ? undefined : '5 7' }).addTo(layer.current).bindTooltip(hint);
+      }
+    }
     if (trip) {
       const path = (trip.path || []).map(point => [point.lat, point.lng] as L.LatLngTuple);
       if (path.length > 1) L.polyline(path, { color: '#3d7951', weight: 5, opacity: .85 }).addTo(layer.current);
@@ -87,7 +103,7 @@ export default function ReportMap({ reports, location, focus, onSelect, trip }: 
       fittedReportIds.current = reportIds;
     }
     if (!trip && !focus && location && !centeredLocation.current) { map.current.setView([location.lat, location.lng], 16, { animate: false }); centeredLocation.current = true; }
-  }, [reports, location, focus, onSelect, trip]);
+  }, [reports, location, focus, onSelect, trip, connections, connectionPath]);
   useEffect(() => {
     if (focus) map.current?.setView([focus.location.lat, focus.location.lng], 17, { animate: false });
   }, [focus]);

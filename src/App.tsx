@@ -20,6 +20,7 @@ import useCommunityFeed from './hooks/useCommunityFeed';
 const TripHistory = lazy(() => import('./components/TripHistory'));
 const PhotoDetector = lazy(() => import('./components/PhotoDetector'));
 const TreeExplorer = lazy(() => import('./components/trees/TreeExplorer'));
+const GraphExplorer = lazy(() => import('./components/graphs/GraphExplorer'));
 
 type Tab = 'home' | 'scan' | 'photo' | 'map' | 'reports' | 'structures' | 'trips';
 const structureLabels: Record<string, string> = {
@@ -27,6 +28,7 @@ const structureLabels: Record<string, string> = {
   circularSinglyLinkedList: 'Lista circular simple', circularDoublyLinkedList: 'Lista circular doble',
   queue: 'Colas FIFO', deque: 'Cola de doble extremo', stack: 'Pila LIFO',
   binarySearchTree: 'Árbol binario de búsqueda', generalTree: 'Árbol de ubicaciones',
+  graph: 'Grafo de cercanía entre baches',
 };
 const riskText: Record<string, string> = {
   LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto', CRITICAL: 'Crítico',
@@ -498,6 +500,7 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
             <p className="section-description">Busca un lugar, filtra por tipo de daño o riesgo y abre sus detalles. «Ver ubicación en mapa» muestra dónde fue registrado. Puedes guardar favoritos o exportar los resultados cargados.</p>
             <ReportSummary reports={reports} total={totalReports} />
             <Suspense fallback={<LoadingIndicator label="Preparando árboles…" />}><TreeExplorer onMap={showOnMap} /></Suspense>
+            <Suspense fallback={<LoadingIndicator label="Preparando grafos…" />}><GraphExplorer onMap={showOnMap} /></Suspense>
             <div className="report-filter"><button className={sort === 'recent' ? 'button-primary' : 'button-secondary'} onClick={() => { setSort('recent'); void refreshReports('recent'); }}>Recientes</button><button className={sort === 'priority' ? 'button-primary' : 'button-secondary'} onClick={() => { setSort('priority'); void refreshReports('priority'); }}>Mayor riesgo</button></div>
             <div className="section-row"><h2>Actividad registrada</h2><span>{loadingReports ? 'Actualizando…' : `${reports.length} cargados`}</span></div>
             {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
@@ -510,6 +513,7 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
         {tab === 'structures' && <div className="page structures-page">
           <div className="page-heading"><div><span className="eyebrow">ESTRUCTURAS DE DATOS</span><h1>Así funciona <em>BacheScan.</em></h1></div></div>
           <Suspense fallback={<LoadingIndicator label="Preparando árboles…" />}><TreeExplorer onMap={showOnMap} defaultOpen /></Suspense>
+          <Suspense fallback={<LoadingIndicator label="Preparando grafos…" />}><GraphExplorer onMap={showOnMap} defaultOpen /></Suspense>
           <p className="section-description">Los árboles ordenan el riesgo y agrupan los reportes por ubicación. Aquí puedes conocer cómo se organiza el trabajo de BacheScan. Las listas ordenan el historial, las colas procesan los análisis y la pila permite volver a una sección anterior.</p>
           {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
           {!structures && !error && <LoadingIndicator label="Cargando información…" />}

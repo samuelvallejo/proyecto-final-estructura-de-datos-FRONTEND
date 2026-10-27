@@ -48,3 +48,9 @@ Desde **Mapa → Reportar un hueco aquí**, una persona puede publicar un aviso 
 BacheScan adapta los ejemplos de árbol binario del material docente Arboles.pdf. El BST permite ordenar, consultar intervalos y recorrer reportes por riesgo; la jerarquía de ubicaciones agrupa ciudad, barrio, vía y bache. La pantalla **Reportes → Abrir explorador de árboles** y la sección **Estructuras** muestran nodos, recorridos y métricas con datos guardados.
 
 Consulta [la guía de árboles](docs/ARBOLES.md) para el uso, la correspondencia con el PDF, los archivos, las restricciones y las pruebas. Las respuestas requieren sesión y representan una muestra explícita de hasta 200 reportes activos. PostgreSQL conserva la persistencia y no se requiere una migración adicional.
+
+## Grafos de cercanía
+
+En **Reportes → Abrir explorador de grafos**, o **Estructuras**, consulta conexiones entre baches, grupos conectados y vecinos. Selecciona origen/destino y BFS o DFS; Dijkstra destaca el camino de menor distancia acumulada. Puedes abrir el diagrama y la vista geográfica de la red. La muestra incluye hasta 80 reportes activos de mayor riesgo y admite conexiones de 50 a 2000 metros. Las líneas representan cercanía, no calles o rutas para conducir.
+
+Consulta [GRAFOS.md](docs/GRAFOS.md) para los conceptos investigados, referencias académicas, archivos, pasos de uso, restricciones y pruebas. Requiere sesión y el backend actualizado; no necesita dependencias nuevas.
