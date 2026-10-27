@@ -204,3 +204,8 @@ test('retiro de un identificador del indice', () => {
 test('busqueda exacta de puntuaciones compartidas', () => {
   const index=new ReportRiskIndex([report('a',70),report('b',70),report('c',90)]);assert.deepEqual(index.inRange(70,70).map(r=>r.id),['a','b']);
 });
+
+
+test('rechazo de riesgo no finito', () => {
+  assert.throws(()=>reportKey(report('a',NaN)));assert.throws(()=>reportKey(report('a',Infinity)));
+});
