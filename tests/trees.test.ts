@@ -84,3 +84,8 @@ test('metricas completas de un arbol binario', () => {
 test('intervalos con extremos inclusivos', () => {
   assert.deepEqual(keys(example().between(2,7)),[2,3,5,6,7]);
 });
+
+
+test('intervalos vacios fuera del dominio', () => {
+  assert.deepEqual(keys(example().between(20,30)),[]);
+});
