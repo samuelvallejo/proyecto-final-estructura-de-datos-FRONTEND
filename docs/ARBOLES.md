@@ -72,3 +72,8 @@ Los controles para cambiar de vista, centrar la raíz, recorrer y abrir el mapa 
 `src/data-structures/BinarySearchTree.ts` contiene nodos, inserción, búsqueda, eliminación, cinco recorridos, rangos y métricas. Las operaciones son iterativas para admitir árboles profundos. La construcción inicial ordena claves y conecta sus puntos medios.
 
 La instantánea se construye equilibrada, pero la clase es un BST y no un AVL con rotaciones automáticas. Buscar, insertar o eliminar depende de la altura; reconstruir la instantánea conserva todos los valores.
+## Consultas y errores
+
+`useReportTree` cancela peticiones obsoletas al cambiar filtros, recorrido o cerrar la pantalla. Cada consulta tiene un límite de espera de 30 segundos. Una respuesta antigua no sustituye la consulta actual.
+
+La interfaz muestra el indicador de carga del proyecto. En caso de fallo, ofrece un mensaje general y «Reintentar árboles». La validación del contrato comprueba límites de muestra, identificadores, padres, niveles y recorridos antes de dibujar.
