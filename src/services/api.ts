@@ -1,4 +1,4 @@
-import type { Health, Position, Report, ReportsPage, ScanResponse, StructureStats } from '../types';
+import type { Health, Position, Report, ReportsPage, ScanResponse, StructureStats, PhotoDetections } from '../types';
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -25,6 +25,17 @@ export const authStatus = () => request<{ authenticated: boolean }>('/auth/sessi
 export const authenticate = (email: string, password: string) => request('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
 export const registerAccount = (displayName: string, email: string, password: string, confirmPassword: string) => request('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName, email, password, confirmPassword }) });
 export const endSession = () => request('/auth/logout', { method: 'POST' });
+export async function detectPotholes(image: File, signal: AbortSignal): Promise<PhotoDetections> {
+  const form = new FormData(); form.append('image', image);
+  const response = await request<PhotoDetections>('/detect/potholes', { method: 'POST', body: form, signal });
+  if (!Number.isInteger(response.ancho) || !Number.isInteger(response.alto) || response.ancho < 32 || response.alto < 32
+    || !Array.isArray(response.detecciones) || response.total_baches !== response.detecciones.length
+    || response.detecciones.some(item => item.clase !== 'pothole' || !Number.isFinite(item.confianza) || item.confianza < 0 || item.confianza > 1
+      || !Array.isArray(item.bbox) || item.bbox.length !== 4 || item.bbox.some(value => !Number.isFinite(value))
+      || item.bbox[0] < 0 || item.bbox[1] < 0 || item.bbox[2] > response.ancho || item.bbox[3] > response.alto
+      || item.bbox[0] >= item.bbox[2] || item.bbox[1] >= item.bbox[3])) throw new Error('No se pudo interpretar el resultado. Inténtalo de nuevo.');
+  return response;
+}
 export async function scanFrame(frame: Blob, location: Position | null, signal: AbortSignal, tripId?: string): Promise<ScanResponse> {
   const form = new FormData();
   form.append('frame', frame, 'fotograma.jpg');

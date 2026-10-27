@@ -31,6 +31,8 @@ export interface ScanResponse {
 }
 export interface ReportsPage { reports: Report[]; total: number; hasMore: boolean }
 export interface Health { status: string }
+export interface PhotoDetection { clase: 'pothole'; confianza: number; bbox: [number, number, number, number] }
+export interface PhotoDetections { total_baches: number; ancho: number; alto: number; detecciones: PhotoDetection[] }
 export interface Trip { id: string; name: string; pointA: string; pointB: string; start: Position; end: Position | null; startedAt: number; endedAt: number | null; reportCount: number; path?: Position[]; reports?: Report[] }
 export interface StructureStat { size?: number; use: string; runningAndQueued?: number }
 export type StructureStats = Record<string, StructureStat | string>;
