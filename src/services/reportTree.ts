@@ -32,3 +32,8 @@ export class ReportRiskIndex {
   }
 
   ordered(order: Traversal = 'descending'): Report[] { return [...this.tree.traverse(order)].map(node => node.value); }
+
+  inRange(minimum = 0, maximum = 100): Report[] {
+    if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum < 0 || maximum > 100 || minimum > maximum) throw new Error('Rango inválido');
+    return [...this.tree.between([minimum, -Infinity, ''], [maximum, Infinity, String.fromCodePoint(0x10ffff)])].map(node => node.value);
+  }
