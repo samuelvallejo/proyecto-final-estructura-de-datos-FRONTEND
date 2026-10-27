@@ -19,7 +19,8 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(readFavorites);
   const [notice, setNotice] = useState('');
-  const visible = filterReports(reports, { query, risk, damage, favoritesOnly }, favorites);
+  const [treeOrder, setTreeOrder] = useState<'original' | 'ascending' | 'descending'>('original');
+  const visible = orderReports(filterReports(reports, { query, risk, damage, favoritesOnly }, favorites), treeOrder);
   const filtered = Boolean(query || risk || damage || favoritesOnly);
   function reset() { setQuery(''); setRisk(''); setDamage(''); setFavoritesOnly(false); }
   function toggleFavorite(id: string) {
