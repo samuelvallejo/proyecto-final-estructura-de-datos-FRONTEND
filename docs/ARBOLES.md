@@ -77,3 +77,8 @@ La instantánea se construye equilibrada, pero la clase es un BST y no un AVL co
 `useReportTree` cancela peticiones obsoletas al cambiar filtros, recorrido o cerrar la pantalla. Cada consulta tiene un límite de espera de 30 segundos. Una respuesta antigua no sustituye la consulta actual.
 
 La interfaz muestra el indicador de carga del proyecto. En caso de fallo, ofrece un mensaje general y «Reintentar árboles». La validación del contrato comprueba límites de muestra, identificadores, padres, niveles y recorridos antes de dibujar.
+## Datos mostrados
+
+El explorador requiere la sesión de la aplicación y usa el endpoint protegido de árboles. Los nodos y reportes contienen información vial compartida; no muestran el correo, contraseña o sesión del autor.
+
+Los recorridos privados A→B mantienen su acceso por propietario. Los árboles no envían imágenes a un servicio externo, no almacenan credenciales en el navegador y no añaden un inicio de sesión distinto.
