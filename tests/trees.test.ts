@@ -69,3 +69,8 @@ test('recorrido FIFO por niveles', () => {
 test('altura del arbol vacio', () => {
   const tree=new BinarySearchTree<number,number>((a,b)=>a-b);assert.equal(tree.height,-1);assert.equal(tree.metrics().levels,0);
 });
+
+
+test('altura de una sola raiz', () => {
+  const tree=BinarySearchTree.fromItems([[1,1]],(a:number,b:number)=>a-b);assert.equal(tree.height,0);assert.equal(tree.metrics().leaves,1);
+});
