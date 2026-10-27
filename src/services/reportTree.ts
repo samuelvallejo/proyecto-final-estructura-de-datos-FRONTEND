@@ -37,3 +37,8 @@ export class ReportRiskIndex {
     if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum < 0 || maximum > 100 || minimum > maximum) throw new Error('Rango inválido');
     return [...this.tree.between([minimum, -Infinity, ''], [maximum, Infinity, String.fromCodePoint(0x10ffff)])].map(node => node.value);
   }
+
+  searchPath(id: string): string[] {
+    const report = this.byId.get(id); return report ? this.tree.trace(reportKey(report)).map(node => node.value.id) : [];
+  }
+}
