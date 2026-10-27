@@ -59,3 +59,8 @@ test('preorden con raiz primero', () => {
 test('postorden con raiz al final', () => {
   assert.deepEqual(keys(example().postOrder()),[1,3,2,6,8,7,5]);
 });
+
+
+test('recorrido FIFO por niveles', () => {
+  assert.deepEqual([...example().levelOrder()].map(item=>[item.node.key,item.level]),[[5,1],[2,2],[7,2],[1,3],[3,3],[6,3],[8,3]]);
+});
