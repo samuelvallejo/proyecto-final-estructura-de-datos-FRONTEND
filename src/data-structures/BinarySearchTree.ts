@@ -8,3 +8,9 @@ export class TreeNode<K, V> {
   right: TreeNode<K, V> | null = null;
   constructor(key: K, value: V) { this.key = key; this.value = value; }
 }
+
+export class BinarySearchTree<K, V> {
+  root: TreeNode<K, V> | null = null;
+  size = 0;
+  readonly compare: Comparator<K>;
+  constructor(compare: Comparator<K>) { this.compare = compare; }
