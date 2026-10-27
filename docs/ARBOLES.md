@@ -67,3 +67,8 @@ Una hoja no tiene hijos. Una rama es un padre que no es la raíz. El grado indic
 Los campos y botones tienen etiquetas visibles y foco de teclado. Los grupos geográficos usan details/summary nativos. El diagrama permite desplazamiento horizontal para mantener nodos de tamaño legible.
 
 Los controles para cambiar de vista, centrar la raíz, recorrer y abrir el mapa están disponibles mediante teclado. El diseño claro conserva la paleta de BacheScan y adapta los indicadores a dos columnas en pantallas pequeñas.
+## Implementación TypeScript
+
+`src/data-structures/BinarySearchTree.ts` contiene nodos, inserción, búsqueda, eliminación, cinco recorridos, rangos y métricas. Las operaciones son iterativas para admitir árboles profundos. La construcción inicial ordena claves y conecta sus puntos medios.
+
+La instantánea se construye equilibrada, pero la clase es un BST y no un AVL con rotaciones automáticas. Buscar, insertar o eliminar depende de la altura; reconstruir la instantánea conserva todos los valores.
