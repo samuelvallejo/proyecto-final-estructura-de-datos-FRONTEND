@@ -164,3 +164,8 @@ test('caminos de busqueda encontrada y ausente', () => {
 test('recorridos de un arbol vacio', () => {
   const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(const order of Object.keys(traversalText))assert.deepEqual([...tree.traverse(order as keyof typeof traversalText)],[]);
 });
+
+
+test('arbol profundo sin recursion', () => {
+  const tree=new BinarySearchTree<number,number>((a,b)=>a-b);for(let n=0;n<1200;n++)tree.insert(n,n);assert.equal(tree.height,1199);assert.equal([...tree.postOrder()].length,1200);
+});
