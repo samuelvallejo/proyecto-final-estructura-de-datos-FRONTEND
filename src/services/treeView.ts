@@ -57,3 +57,32 @@ export function treeReportLabel(report: Report): string {
   const place = [report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', ');
   return `Riesgo ${report.hazardScore}/100 · ${place || 'Ubicación GPS sin dirección'}`;
 }
+
+export function validateTreeSnapshot(value: TreeSnapshot): TreeSnapshot {
+  const invalid = () => { throw new Error('No se pudo interpretar el árbol de reportes.'); };
+  if (!value || !value.scope || !value.binary || !value.geography || !Array.isArray(value.reports)
+    || !Array.isArray(value.binary.nodes) || !Array.isArray(value.geography.nodes)
+    || value.reports.length > 200 || value.binary.nodes.length !== value.reports.length
+    || value.geography.nodes.length > 801 || value.scope.loaded !== value.reports.length) invalid();
+  const ids = new Set(value.reports.map(report => report.id));
+  const nodes = new Map(value.binary.nodes.map(node => [node.id, node]));
+  if (ids.size !== value.reports.length || nodes.size !== ids.size
+    || value.binary.metrics.weight !== nodes.size
+    || value.binary.traversal.reportIds.length !== ids.size
+    || new Set(value.binary.traversal.reportIds).size !== ids.size
+    || value.binary.traversal.reportIds.some(id => !ids.has(id))
+    || value.binary.rootId !== null && !nodes.has(value.binary.rootId)) invalid();
+  for (const node of value.binary.nodes) {
+    if (!ids.has(node.id) || !Number.isFinite(node.score) || node.score < 0 || node.score > 100
+      || !Number.isInteger(node.level) || node.level < 1 || node.level > 200
+      || [node.leftId, node.rightId, node.parentId].some(id => id !== null && !nodes.has(id))
+      || binaryPath(value.binary, node.id).length !== node.level) invalid();
+  }
+  const places = new Map(value.geography.nodes.map(node => [node.id, node]));
+  if (places.size !== value.geography.nodes.length || !places.has(value.geography.rootId)) invalid();
+  for (const node of value.geography.nodes) {
+    if (!Array.isArray(node.childIds) || node.childIds.some(id => !places.has(id))
+      || node.reportId !== null && !ids.has(node.reportId) || node.level < 1 || node.level > 5) invalid();
+  }
+  return value;
+}
