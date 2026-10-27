@@ -44,3 +44,8 @@ test('pertenencia de un valor undefined', () => {
 test('ordenamiento del ejemplo del PDF', () => {
   assert.deepEqual(keys(example().inOrder()),[1,2,3,5,6,7,8]);
 });
+
+
+test('orden descendente de claves', () => {
+  assert.deepEqual(keys(example().reverseOrder()),[8,7,6,5,3,2,1]);
+});
