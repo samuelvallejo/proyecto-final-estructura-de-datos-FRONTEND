@@ -206,3 +206,6 @@ export class BinarySearchTree<K, V> {
     }
     return seen.size === this.size;
   }
+
+  clear(): void { this.root = null; this.size = 0; }
+}
