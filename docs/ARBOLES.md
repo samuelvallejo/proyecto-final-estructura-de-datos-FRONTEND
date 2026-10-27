@@ -52,3 +52,8 @@ La clave incluye fecha e identificador para conservar empates. Una búsqueda sin
 «Árbol por ubicación» muestra grupos que puedes abrir progresivamente. Las hojas de reporte ofrecen «Ver en mapa». Los conteos y riesgos máximos corresponden al subárbol de esa ubicación.
 
 Los nombres sin identificar agrupan reportes con GPS cuya dirección no está resuelta. Una calle con el mismo nombre en barrios diferentes permanece separada por su ruta de padres.
+## Abrir el mapa
+
+«Ver bache seleccionado en mapa» y las hojas del árbol geográfico abren el reporte correspondiente. Se usan sus coordenadas guardadas, incluso si ese reporte no estaba dentro de los primeros resultados del listado principal.
+
+La ubicación es aproximada según el GPS con el que se registró. El árbol organiza reportes existentes y no geolocaliza una imagen por su contenido.
