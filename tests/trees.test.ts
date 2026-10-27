@@ -179,3 +179,8 @@ test('comparacion de riesgo fecha e identificador', () => {
 test('deduplicacion por identidad de reporte', () => {
   const index=new ReportRiskIndex([report('a',20),report('a',90)]);assert.equal(index.tree.size,1);assert.equal(index.ordered()[0].hazardScore,90);
 });
+
+
+test('empates que no eliminan baches', () => {
+  const index=new ReportRiskIndex([report('a',70),report('b',70)]);assert.deepEqual(index.ordered('inorder').map(r=>r.id),['a','b']);
+});
