@@ -149,3 +149,22 @@ export class BinarySearchTree<K, V> {
       yield current; current = current.right;
     }
   }
+
+  remove(key: K): boolean {
+    let parent: TreeNode<K, V> | null = null; let current = this.root;
+    while (current && this.compare(key, current.key) !== 0) {
+      parent = current; current = this.compare(key, current.key) < 0 ? current.left : current.right;
+    }
+    if (!current) return false;
+    if (current.left && current.right) {
+      let nextParent = current; let next = current.right;
+      while (next.left) { nextParent = next; next = next.left; }
+      current.key = next.key; current.value = next.value;
+      parent = nextParent; current = next;
+    }
+    const child = current.left ?? current.right;
+    if (!parent) this.root = child;
+    else if (parent.left === current) parent.left = child;
+    else parent.right = child;
+    this.size--; return true;
+  }
