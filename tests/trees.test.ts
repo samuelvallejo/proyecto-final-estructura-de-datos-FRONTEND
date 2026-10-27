@@ -264,3 +264,8 @@ test('recorrido de las hojas geograficas', () => {
 test('rutas geograficas desconocidas', () => {
   assert.deepEqual(placeReports(snapshot().geography,'missing'),[]);
 });
+
+
+test('etiquetas con ubicacion legible', () => {
+  assert.equal(treeReportLabel(report('a',70)),'Riesgo 70/100 · Calle 1, Centro, Cali');
+});
