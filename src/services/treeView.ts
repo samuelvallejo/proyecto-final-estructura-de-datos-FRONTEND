@@ -85,7 +85,8 @@ export function validateTreeSnapshot(value: TreeSnapshot): TreeSnapshot {
   const places = new Map(value.geography.nodes.map(node => [node.id, node]));
   if (places.size !== value.geography.nodes.length || !places.has(value.geography.rootId)) invalid();
   for (const node of value.geography.nodes) {
-    if (!Array.isArray(node.childIds) || node.childIds.some(id => !places.has(id))
+    if (!Array.isArray(node.childIds) || node.childIds.some(id => !places.has(id)
+      || places.get(id)?.parentId !== node.id || places.get(id)?.level !== node.level + 1)
       || node.reportId !== null && !ids.has(node.reportId) || node.level < 1 || node.level > 5) invalid();
   }
   return value;
