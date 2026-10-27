@@ -239,3 +239,8 @@ test('entrada numerica sin letras ni separadores', () => {
 test('camino de un nodo recibido desde la API', () => {
   assert.deepEqual(binaryPath(snapshot().binary,'a'),['b','a']);assert.deepEqual(binaryPath(snapshot().binary,'missing'),[]);
 });
+
+
+test('rechazo de ciclos en caminos recibidos', () => {
+  const value=snapshot();value.binary.nodes.find(n=>n.id==='a')!.parentId='a';assert.deepEqual(binaryPath(value.binary,'a'),[]);
+});
