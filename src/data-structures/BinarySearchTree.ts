@@ -134,3 +134,18 @@ export class BinarySearchTree<K, V> {
     }
     return result;
   }
+
+  *between(lower: K, upper: K): Generator<TreeNode<K, V>> {
+    if (this.compare(lower, upper) > 0) throw new Error('Rango inválido');
+    const pending: TreeNode<K, V>[] = []; let current = this.root;
+    while (current || pending.length) {
+      while (current) {
+        if (this.compare(current.key, lower) < 0) current = current.right;
+        else { pending.push(current); current = current.left; }
+      }
+      if (!pending.length) break;
+      current = pending.pop()!;
+      if (this.compare(current.key, upper) > 0) break;
+      yield current; current = current.right;
+    }
+  }
