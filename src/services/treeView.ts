@@ -12,3 +12,15 @@ export function scoreInput(value: string): string {
   const digits = value.replace(/[^0-9]/g, '').slice(0, 3);
   return digits ? String(Math.min(100, Number(digits))) : '';
 }
+
+export function binaryPath(tree: BinaryReportTree, id: string): string[] {
+  const nodes = new Map(tree.nodes.map(node => [node.id, node]));
+  const result: string[] = []; const visited = new Set<string>();
+  let current: string | null = id;
+  while (current !== null) {
+    const node = nodes.get(current);
+    if (!node || visited.has(current)) return [];
+    visited.add(current); result.push(current); current = node.parentId;
+  }
+  return result.reverse();
+}
