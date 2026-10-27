@@ -289,3 +289,8 @@ test('rechazo de limites de muestra incoherentes', () => {
 test('rechazo de identificadores duplicados en recorridos', () => {
   const value=snapshot();value.binary.traversal.reportIds=['a','a','c'];assert.throws(()=>validateTreeSnapshot(value));
 });
+
+
+test('rechazo de un hijo binario ajeno al arbol', () => {
+  const value=snapshot();value.binary.nodes[0].leftId='missing';assert.throws(()=>validateTreeSnapshot(value));
+});
