@@ -219,3 +219,8 @@ test('rechazo de fecha negativa', () => {
 test('ordenamiento sin mutar el arreglo original', () => {
   const values=[report('a',20),report('b',90)];assert.deepEqual(orderReports(values,'descending').map(r=>r.id),['b','a']);assert.deepEqual(values.map(r=>r.id),['a','b']);
 });
+
+
+test('orden ascendente y preservacion del orden original', () => {
+  const values=[report('a',90),report('b',20)];assert.deepEqual(orderReports(values,'ascending').map(r=>r.id),['b','a']);assert.deepEqual(orderReports(values,'original'),values);assert.notEqual(orderReports(values,'original'),values);
+});
