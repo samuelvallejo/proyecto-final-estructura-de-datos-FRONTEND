@@ -189,3 +189,8 @@ test('empates que no eliminan baches', () => {
 test('actualizaciones que mueven la clave de riesgo', () => {
   const index=new ReportRiskIndex([report('a',20),report('b',60)]);index.upsert(report('a',90));assert.deepEqual(index.ordered().map(r=>r.id),['a','b']);assert.equal(index.tree.size,2);
 });
+
+
+test('actualizaciones invalidas sin perdida de datos', () => {
+  const index=new ReportRiskIndex([report('a',20)]);assert.throws(()=>index.upsert(report('a',101)));assert.equal(index.ordered()[0].hazardScore,20);
+});
