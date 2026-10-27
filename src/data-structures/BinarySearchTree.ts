@@ -192,3 +192,17 @@ export class BinarySearchTree<K, V> {
     const rebuilt = BinarySearchTree.fromItems([...this.inOrder()].map(node => [node.key, node.value]), this.compare);
     this.root = rebuilt.root; this.size = rebuilt.size;
   }
+
+  validate(): boolean {
+    const seen = new Set<TreeNode<K, V>>();
+    const pending: { node: TreeNode<K, V>; lower?: K; upper?: K }[] = this.root ? [{ node: this.root }] : [];
+    while (pending.length) {
+      const { node, lower, upper } = pending.pop()!;
+      if (seen.has(node) || lower !== undefined && this.compare(node.key, lower) <= 0
+        || upper !== undefined && this.compare(node.key, upper) >= 0) return false;
+      seen.add(node);
+      if (node.right) pending.push({ node: node.right, lower: node.key, upper });
+      if (node.left) pending.push({ node: node.left, lower, upper: node.key });
+    }
+    return seen.size === this.size;
+  }
