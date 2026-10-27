@@ -39,3 +39,8 @@ test('busqueda de descendientes y claves ausentes', () => {
 test('pertenencia de un valor undefined', () => {
   const tree=new BinarySearchTree<number,undefined>((a,b)=>a-b);tree.insert(1,undefined);assert.equal(tree.contains(1),true);assert.equal(tree.contains(2),false);
 });
+
+
+test('ordenamiento del ejemplo del PDF', () => {
+  assert.deepEqual(keys(example().inOrder()),[1,2,3,5,6,7,8]);
+});
