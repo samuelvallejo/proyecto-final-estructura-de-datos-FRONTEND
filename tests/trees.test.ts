@@ -254,3 +254,8 @@ test('posiciones simetricas del diagrama', () => {
 test('limite de niveles dibujados', () => {
   assert.equal(binaryLayout(snapshot().binary,1).length,1);assert.equal(binaryLayout(snapshot().binary,0).length,0);
 });
+
+
+test('recorrido de las hojas geograficas', () => {
+  assert.deepEqual(placeReports(snapshot().geography,'root'),['a','b','c']);assert.deepEqual(placeReports(snapshot().geography,'ra'),['a']);
+});
