@@ -509,7 +509,8 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
         )}
         {tab === 'structures' && <div className="page structures-page">
           <div className="page-heading"><div><span className="eyebrow">ESTRUCTURAS DE DATOS</span><h1>Así funciona <em>BacheScan.</em></h1></div></div>
-          <p className="section-description">Aquí puedes conocer cómo se organiza el trabajo de BacheScan. Las listas ordenan el historial, las colas procesan los análisis y la pila permite volver a una sección anterior.</p>
+          <Suspense fallback={<LoadingIndicator label="Preparando árboles…" />}><TreeExplorer onMap={showOnMap} defaultOpen /></Suspense>
+          <p className="section-description">Los árboles ordenan el riesgo y agrupan los reportes por ubicación. Aquí puedes conocer cómo se organiza el trabajo de BacheScan. Las listas ordenan el historial, las colas procesan los análisis y la pila permite volver a una sección anterior.</p>
           {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
           {!structures && !error && <LoadingIndicator label="Cargando información…" />}
           {structures && Object.entries(structures).filter(([, value]) => typeof value !== 'string').map(([key, value]) => {
