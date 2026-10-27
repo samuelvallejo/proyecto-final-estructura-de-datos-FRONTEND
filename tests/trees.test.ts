@@ -54,3 +54,8 @@ test('orden descendente de claves', () => {
 test('preorden con raiz primero', () => {
   assert.deepEqual(keys(example().preOrder()),[5,2,1,3,7,6,8]);
 });
+
+
+test('postorden con raiz al final', () => {
+  assert.deepEqual(keys(example().postOrder()),[1,3,2,6,8,7,5]);
+});
