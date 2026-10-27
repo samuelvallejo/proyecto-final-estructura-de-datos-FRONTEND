@@ -234,3 +234,8 @@ test('limite escrito de riesgo cien', () => {
 test('entrada numerica sin letras ni separadores', () => {
   assert.equal(scoreInput('a7b0'),'70');assert.equal(scoreInput(''), '');assert.equal(scoreInput('000'),'0');
 });
+
+
+test('camino de un nodo recibido desde la API', () => {
+  assert.deepEqual(binaryPath(snapshot().binary,'a'),['b','a']);assert.deepEqual(binaryPath(snapshot().binary,'missing'),[]);
+});
