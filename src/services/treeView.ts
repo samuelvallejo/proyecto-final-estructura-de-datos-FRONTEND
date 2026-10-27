@@ -7,3 +7,8 @@ export const traversalText = {
   postorder: { label: 'Postorden: raíz al final', help: 'Visita los hijos izquierdo y derecho antes del nodo.' },
   level: { label: 'Por niveles: de arriba hacia abajo', help: 'Una cola visita primero los nodos más cercanos a la raíz.' },
 };
+
+export function scoreInput(value: string): string {
+  const digits = value.replace(/[^0-9]/g, '').slice(0, 3);
+  return digits ? String(Math.min(100, Number(digits))) : '';
+}
