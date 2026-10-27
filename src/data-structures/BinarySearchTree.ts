@@ -168,3 +168,22 @@ export class BinarySearchTree<K, V> {
     else parent.right = child;
     this.size--; return true;
   }
+
+  static fromItems<K, V>(items: Iterable<[K, V]>, compare: Comparator<K>): BinarySearchTree<K, V> {
+    const pairs = [...items].sort((a, b) => compare(a[0], b[0]));
+    const unique: [K, V][] = [];
+    for (const pair of pairs) {
+      if (unique.length && compare(unique[unique.length - 1][0], pair[0]) === 0) unique[unique.length - 1] = pair;
+      else unique.push(pair);
+    }
+    const tree = new BinarySearchTree<K, V>(compare);
+    const tasks: [number, number, TreeNode<K, V> | null, 'root' | 'left' | 'right'][] = [[0, unique.length, null, 'root']];
+    while (tasks.length) {
+      const [first, last, parent, side] = tasks.pop()!;
+      if (first >= last) continue;
+      const middle = Math.floor((first + last) / 2); const node = new TreeNode(...unique[middle]);
+      if (parent && side !== 'root') parent[side] = node; else tree.root = node;
+      tree.size++; tasks.push([middle + 1, last, node, 'right'], [first, middle, node, 'left']);
+    }
+    return tree;
+  }
