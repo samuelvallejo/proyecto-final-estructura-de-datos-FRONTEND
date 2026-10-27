@@ -39,3 +39,5 @@ export class BinarySearchTree<K, V> {
   }
 
   search(key: K): V | undefined { return this.findNode(key)?.value; }
+
+  contains(key: K): boolean { return this.findNode(key) !== null; }
