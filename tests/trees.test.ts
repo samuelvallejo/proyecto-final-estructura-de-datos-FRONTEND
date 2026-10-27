@@ -129,3 +129,8 @@ test('sucesor profundo sin perder su hijo', () => {
 test('construccion equilibrada de doscientos nodos', () => {
   const tree=BinarySearchTree.fromItems(Array.from({length:200},(_,n)=>[n,n] as [number,number]),(a,b)=>a-b);assert.equal(tree.height,7);assert.equal(tree.validate(),true);
 });
+
+
+test('ultima escritura para claves duplicadas', () => {
+  const tree=BinarySearchTree.fromItems([[2,'a'],[1,'b'],[2,'c']] as [number,string][],(a,b)=>a-b);assert.equal(tree.size,2);assert.equal(tree.search(2),'c');
+});
