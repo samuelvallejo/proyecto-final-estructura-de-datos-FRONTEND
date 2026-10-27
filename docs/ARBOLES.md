@@ -62,3 +62,8 @@ La ubicación es aproximada según el GPS con el que se registró. El árbol org
 Peso es el número de nodos. La raíz tiene nivel 1. Altura es el número de aristas del camino más largo. El BST vacío usa altura -1 y cero niveles; un BST con una raíz tiene altura 0.
 
 Una hoja no tiene hijos. Una rama es un padre que no es la raíz. El grado indica cuántos hijos tiene un nodo. El árbol binario admite como máximo dos; el geográfico puede tener varios barrios o vías como hijos.
+## Teclado y celular
+
+Los campos y botones tienen etiquetas visibles y foco de teclado. Los grupos geográficos usan details/summary nativos. El diagrama permite desplazamiento horizontal para mantener nodos de tamaño legible.
+
+Los controles para cambiar de vista, centrar la raíz, recorrer y abrir el mapa están disponibles mediante teclado. El diseño claro conserva la paleta de BacheScan y adapta los indicadores a dos columnas en pantallas pequeñas.
