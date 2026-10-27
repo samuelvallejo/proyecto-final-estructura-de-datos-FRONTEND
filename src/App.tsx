@@ -496,6 +496,7 @@ export default function App({ onLogout, logoutBusy }: { onLogout: () => void; lo
             <div className="summary-card"><div className="summary-art"><Activity size={40} /></div><div><small>REPORTES EN LA PLATAFORMA</small><strong>{totalReports}</strong><span>Visibles para la comunidad</span></div></div>
             <p className="section-description">Busca un lugar, filtra por tipo de daño o riesgo y abre sus detalles. «Ver ubicación en mapa» muestra dónde fue registrado. Puedes guardar favoritos o exportar los resultados cargados.</p>
             <ReportSummary reports={reports} total={totalReports} />
+            <Suspense fallback={<LoadingIndicator label="Preparando árboles…" />}><TreeExplorer onMap={showOnMap} /></Suspense>
             <div className="report-filter"><button className={sort === 'recent' ? 'button-primary' : 'button-secondary'} onClick={() => { setSort('recent'); void refreshReports('recent'); }}>Recientes</button><button className={sort === 'priority' ? 'button-primary' : 'button-secondary'} onClick={() => { setSort('priority'); void refreshReports('priority'); }}>Mayor riesgo</button></div>
             <div className="section-row"><h2>Actividad registrada</h2><span>{loadingReports ? 'Actualizando…' : `${reports.length} cargados`}</span></div>
             {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}
