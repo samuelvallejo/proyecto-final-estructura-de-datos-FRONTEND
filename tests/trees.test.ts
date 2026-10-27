@@ -284,3 +284,8 @@ test('aceptacion de un contrato de arbol valido', () => {
 test('rechazo de limites de muestra incoherentes', () => {
   const value=snapshot();value.scope.loaded=99;assert.throws(()=>validateTreeSnapshot(value));
 });
+
+
+test('rechazo de identificadores duplicados en recorridos', () => {
+  const value=snapshot();value.binary.traversal.reportIds=['a','a','c'];assert.throws(()=>validateTreeSnapshot(value));
+});
