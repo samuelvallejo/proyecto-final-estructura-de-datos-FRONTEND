@@ -299,3 +299,8 @@ test('rechazo de un hijo binario ajeno al arbol', () => {
 test('rechazo de una rama geografica con nivel incorrecto', () => {
   const value=snapshot();value.geography.nodes[1].level=5;assert.throws(()=>validateTreeSnapshot(value));
 });
+
+
+test('rechazo de una raiz binaria ausente', () => {
+  const value=snapshot();value.binary.rootId=null;assert.throws(()=>validateTreeSnapshot(value));
+});
