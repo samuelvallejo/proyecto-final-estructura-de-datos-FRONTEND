@@ -14,3 +14,8 @@ test('raiz nula y peso cero', () => {
 test('insercion de la raiz', () => {
   const tree=new BinarySearchTree<number,string>((a,b)=>a-b);assert.equal(tree.insert(5,'raíz'),true);assert.equal(tree.root?.key,5);
 });
+
+
+test('enlaces izquierdos de valores menores', () => {
+  const tree=example();assert.equal(tree.root?.left?.key,2);assert.equal(tree.root?.left?.left?.key,1);
+});
