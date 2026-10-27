@@ -37,3 +37,5 @@ export class BinarySearchTree<K, V> {
     }
     return null;
   }
+
+  search(key: K): V | undefined { return this.findNode(key)?.value; }
