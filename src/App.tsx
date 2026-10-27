@@ -26,6 +26,7 @@ const structureLabels: Record<string, string> = {
   array: 'Arrays', singlyLinkedList: 'Lista simple', doublyLinkedList: 'Lista doble',
   circularSinglyLinkedList: 'Lista circular simple', circularDoublyLinkedList: 'Lista circular doble',
   queue: 'Colas FIFO', deque: 'Cola de doble extremo', stack: 'Pila LIFO',
+  binarySearchTree: 'Árbol binario de búsqueda', generalTree: 'Árbol de ubicaciones',
 };
 const riskText: Record<string, string> = {
   LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto', CRITICAL: 'Crítico',
