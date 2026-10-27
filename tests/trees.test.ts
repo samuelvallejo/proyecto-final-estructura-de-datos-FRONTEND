@@ -149,3 +149,8 @@ test('deteccion de ciclos', () => {
 test('deteccion de claves fuera de su rama', () => {
   const tree=example();tree.root!.left!.right!.key=99;assert.equal(tree.validate(),false);
 });
+
+
+test('vaciado y posterior reutilizacion', () => {
+  const tree=example();tree.clear();tree.insert(9,'nueve');assert.equal(tree.size,1);assert.equal(tree.search(9),'nueve');
+});
