@@ -47,3 +47,8 @@ El camino resaltado muestra qué nodos visita la búsqueda binaria desde la raí
 «Buscar puntuación exacta» acepta de 0 a 100 y consulta el BST TypeScript dentro de la muestra. Si varios reportes tienen el mismo riesgo, aparecen todos. Seleccionar una coincidencia mueve el recorrido a ese reporte.
 
 La clave incluye fecha e identificador para conservar empates. Una búsqueda sin coincidencias muestra un estado vacío y no crea un reporte ni llama al modelo de visión.
+## Ciudad, barrio, vía y bache
+
+«Árbol por ubicación» muestra grupos que puedes abrir progresivamente. Las hojas de reporte ofrecen «Ver en mapa». Los conteos y riesgos máximos corresponden al subárbol de esa ubicación.
+
+Los nombres sin identificar agrupan reportes con GPS cuya dirección no está resuelta. Una calle con el mismo nombre en barrios diferentes permanece separada por su ruta de padres.
