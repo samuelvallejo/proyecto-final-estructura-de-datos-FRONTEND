@@ -105,3 +105,9 @@ export class BinarySearchTree<K, V> {
       default: throw new Error('Recorrido inválido');
     }
   }
+
+  get height(): number {
+    let height = -1;
+    for (const { level } of this.levelOrder()) height = Math.max(height, level - 1);
+    return height;
+  }
