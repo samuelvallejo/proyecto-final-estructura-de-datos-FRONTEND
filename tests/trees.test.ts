@@ -244,3 +244,8 @@ test('camino de un nodo recibido desde la API', () => {
 test('rechazo de ciclos en caminos recibidos', () => {
   const value=snapshot();value.binary.nodes.find(n=>n.id==='a')!.parentId='a';assert.deepEqual(binaryPath(value.binary,'a'),[]);
 });
+
+
+test('posiciones simetricas del diagrama', () => {
+  const layout=binaryLayout(snapshot().binary);assert.equal(layout.find(n=>n.id==='b')?.x,50);assert.equal(layout.find(n=>n.id==='a')?.x,25);assert.equal(layout.find(n=>n.id==='c')?.x,75);
+});
