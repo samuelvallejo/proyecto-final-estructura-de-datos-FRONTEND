@@ -45,6 +45,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
         <label>Nivel de riesgo<select value={risk} onChange={event => setRisk(event.target.value)}><option value="">Todos los niveles</option>{Object.entries(riskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Tipo de daño<select value={damage} onChange={event => setDamage(event.target.value)}><option value="">Todos los daños</option>{Object.entries(damageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       </div>
+      <label className="tree-order">Ordenar los reportes cargados<select value={treeOrder} onChange={event => setTreeOrder(event.target.value as typeof treeOrder)}><option value="original">Conservar orden de la consulta</option><option value="descending">Mayor riesgo primero (árbol binario)</option><option value="ascending">Menor riesgo primero (árbol binario)</option></select></label>
       <label className="favorite-filter"><input type="checkbox" checked={favoritesOnly} onChange={event => setFavoritesOnly(event.target.checked)} /> Solo favoritos de este navegador</label>
       <div className="explorer-actions"><button className="button-secondary" disabled={!filtered} onClick={reset}>Limpiar filtros</button><button className="button-primary" disabled={!visible.length || loading} onClick={download}><Download size={15} /> Exportar CSV</button></div>
     </div>
