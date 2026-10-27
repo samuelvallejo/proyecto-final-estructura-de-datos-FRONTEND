@@ -154,3 +154,8 @@ test('deteccion de claves fuera de su rama', () => {
 test('vaciado y posterior reutilizacion', () => {
   const tree=example();tree.clear();tree.insert(9,'nueve');assert.equal(tree.size,1);assert.equal(tree.search(9),'nueve');
 });
+
+
+test('caminos de busqueda encontrada y ausente', () => {
+  assert.deepEqual(keys(example().trace(1)),[5,2,1]);assert.deepEqual(keys(example().trace(4)),[5,2,3]);
+});
