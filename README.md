@@ -37,6 +37,10 @@ Los recuadros muestran múltiples detecciones YOLO, su confianza y el nivel de r
 
 El flujo de control de calidad del frontend se ejecuta con `npm run lint`, `npm test` y `npm run build`, y se integra en GitHub Actions sobre `main`.
 
+## Integracion con el backend
+
+El frontend consume la API en el prefijo `/api` del backend desplegado. Las peticiones incluyen credenciales (`credentials: 'include'`) y gestionan errores via el servicio `ApiError` del cliente HTTP.
+
 ## Errores, pruebas y control de calidad
 
 Si un componente falla al renderizar, el `src/components/ErrorBoundary.tsx` muestra una salida segura con opción de reintento en lugar de dejar la pantalla en blanco.
