@@ -33,6 +33,14 @@ Ejecuta `npm ci` y `npm run dev`. Vite reenvía `/api` al backend Python de `htt
 
 Los recuadros muestran múltiples detecciones YOLO, su confianza y el nivel de riesgo visual. La posición corresponde al GPS del teléfono con su precisión; no es una medición exacta individual del bache. El video se analiza por fotogramas muestreados, no cada fotograma. El sistema requiere internet y debe permanecer abierto. La operación real en moto necesita pruebas en campo; configura y fija el teléfono antes de conducir, sin manipularlo en movimiento.
 
+## Errores, pruebas y control de calidad
+
+Si un componente falla al renderizar, el `src/components/ErrorBoundary.tsx` muestra una salida segura con opción de reintento en lugar de dejar la pantalla en blanco.
+
+`npm run lint` ejecuta oxlint sobre React y accesibilidad; `npm test` ejecuta las pruebas nativas de Node sobre `tests/*.test.ts`; `npm run build` verifica TypeScript y genera el bundle. El workflow de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, pruebas y build en cada push y pull request sobre `main`.
+
+Las pruebas cubren las estructuras de datos del proyecto (árbol binario de búsqueda, pila de navegación), las herramientas de reportes (filtros normalizados, exportación CSV con escape de fórmulas) y las funciones puras de cercanía y GPS de la comunidad.
+
 ## Secciones
 
 Inicio orienta al usuario con acciones y pasos. Escanear muestra cámara, detecciones, permisos y recorrido activo. Mapa explica marcadores y filtros. Reportes permite buscar (máximo 120 caracteres), filtrar, guardar favoritos y exportar los resultados cargados. Mis recorridos muestra únicamente caminos de la cuenta actual. Estructuras explica el uso de arrays, listas enlazadas, colas y pilas.
