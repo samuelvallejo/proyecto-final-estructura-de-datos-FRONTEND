@@ -1,5 +1,5 @@
 import type { Position, Report } from '../types';
-import { request } from './api';
+import { request } from './api.ts';
 
 export const publishCommunityReport = (position: Position, risk: string, description: string, signal: AbortSignal) =>
   request<{ report: Report; existing: boolean; message: string }>('/community/reports', {
