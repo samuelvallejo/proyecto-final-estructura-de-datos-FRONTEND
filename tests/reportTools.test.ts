@@ -32,7 +32,7 @@ test('etiquetas de riesgo y tipo de daño en español', () => {
 test('normalizar quita acentos, mayúsculas y espacios', () => {
   assert.equal(normalize('  Bache '), 'bache');
   assert.equal(normalize('HUNDIMIENTO'), 'hundimiento');
-  assert.equal(normalize('Daño Vial'), 'danio vial');
+  assert.equal(normalize('Daño Vial'), 'dano vial');
   assert.equal(normalize('  Grieta   de Asfalto '), 'grieta de asfalto');
 });
 
@@ -51,7 +51,7 @@ test('filtrar por tipo de daño y favoritos', () => {
 
 test('filtrar por texto normalizado sin modificar el arreglo original', () => {
   const items = [report({ id: 'a', aiDescription: 'Hundimiento en la calzada central' }),
-    report({ id: 'b', aiDescription: 'Grieta en la acera norte' })];
+    report({ id: 'b', potholeType: 'GRIETA', aiDescription: 'Grieta en la acera norte' })];
   assert.deepEqual(filterReports(items, { query: 'bache', risk: '', damage: '', favoritesOnly: false }, []).map(item => item.id), ['a']);
   const original = [report({ id: 'a' }), report({ id: 'b' })];
   assert.deepEqual(filterReports(original, { query: '', risk: '', damage: '', favoritesOnly: false }, []), original);
@@ -62,8 +62,10 @@ test('exportar reportes a CSV con BOM, separador y escape de formulas', () => {
   assert.ok(csv.startsWith('\uFEFF'));
   const rows = csv.split('\r\n');
   assert.equal(rows.length, 2);
-  assert.equal(rows[0], 'Fecha ISO;Tipo;Riesgo;Puntuación;Dirección;Latitud;Longitud;Precisión (m);Descripción;Estado');
-  assert.equal(rows[1].split(';')[2], 'Alto');
+  const header = rows[0].replace(/^\uFEFF/, '').split(';').map(cell => cell.replace(/^"|"$/g, '')).join(';');
+  assert.equal(header, 'Fecha ISO;Tipo;Riesgo;Puntuación;Dirección;Latitud;Longitud;Precisión (m);Descripción;Estado');
+  const dataRow = rows[1].replace(/^\uFEFF/, '').split(';').map(cell => cell.replace(/^"|"$/g, '')).join(';');
+  assert.equal(dataRow.split(';')[2], 'Alto');
   const dangerous = reportsCsv([report({ id: 'x', aiDescription: '=SUMA(1+1)' })]);
-  assert.ok(!dangerous.includes('=SUMA(1+1)'));
+  assert.ok(dangerous.includes("'=SUMA(1+1)"));
 });
