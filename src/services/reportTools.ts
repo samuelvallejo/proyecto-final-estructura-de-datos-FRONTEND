@@ -4,7 +4,7 @@ export const riskLabels = { LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto', CRITI
 export const damageLabels = { BACHE: 'Bache', HUNDIMIENTO: 'Hundimiento', GRIETA: 'Grieta', OTRO_DANO: 'Daño vial' };
 export interface Filters { query: string; risk: string; damage: string; favoritesOnly: boolean }
 export function normalize(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').trim();
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').trim().replace(/\s+/g, ' ');
 }
 export function filterReports(reports: Report[], filters: Filters, favorites: string[]): Report[] {
   const query = normalize(filters.query);
