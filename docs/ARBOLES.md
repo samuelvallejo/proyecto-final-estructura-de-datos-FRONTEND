@@ -96,7 +96,7 @@ Los recorridos privados A→B mantienen su acceso por propietario. Los árboles 
 La documentación docente enumera otros tipos de árboles. Esta adaptación implementa el BST del código de clase y una jerarquía general de ubicaciones; no presenta esas otras variantes como implementadas.
 ## Ejecución y pruebas
 
-Usa Node.js 24, ejecuta `npm ci` y `npm run dev`. El proxy local de Vite necesita la API Python disponible en el puerto 3001. En producción, `/api` continúa apuntando al backend de Railway mediante la configuración de Vercel.
+Usa Node.js 24, ejecuta `npm ci` y `npm run dev`. El proxy local de Vite necesita la API Python disponible en el puerto 3001. En producción, Vercel reenvía `/api` al backend en Azure Container Apps.
 
 `npm test` ejecuta las pruebas de árbol con el ejecutor nativo de Node y sin dependencias nuevas. `npm run build` valida TypeScript y compila la aplicación; `npm run lint` revisa el código. Las pruebas cubren enlaces, recorridos, eliminación, rangos, empates, contratos y posiciones del diagrama.
 ## Límites de la función

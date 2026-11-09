@@ -12,7 +12,7 @@ Los pesos `.pt`, PyTorch y Ultralytics permanecen en el backend; no se descargan
 
 ## Desarrollo
 
-Ejecuta `npm ci` y `npm run dev`. Vite reenvía `/api` al backend Python de `http://127.0.0.1:3001`. Configura allí PostgreSQL, `DATA_ENCRYPTION_KEY` privada y `SECURE_COOKIES=false` exclusivamente en desarrollo. En producción, Vercel reenvía `/api` a Railway mediante `vercel.json`, manteniendo las cookies en el mismo origen. Ya no se utiliza `VITE_API_URL`.
+Ejecuta `npm ci` y `npm run dev`. Vite reenvía `/api` al backend Python de `http://127.0.0.1:3001`. Configura allí PostgreSQL, `DATA_ENCRYPTION_KEY` privada y `SECURE_COOKIES=false` exclusivamente en desarrollo. En producción, Vercel reenvía `/api` a Azure Container Apps mediante `vercel.json`, manteniendo las cookies en el mismo origen. Ya no se utiliza `VITE_API_URL`.
 
 `npm run build` comprueba TypeScript y construye la aplicación. `npm run lint` revisa React y accesibilidad. El service worker solo guarda recursos públicos de la aplicación; no guarda las respuestas `/api` ni credenciales.
 
