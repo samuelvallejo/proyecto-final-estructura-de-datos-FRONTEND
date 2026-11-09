@@ -46,7 +46,7 @@ function frameFromVideo(video: HTMLVideoElement): Promise<Blob> {
   const scale = Math.max(stage.width / video.videoWidth, stage.height / video.videoHeight);
   const sourceWidth = stage.width / scale;
   const sourceHeight = stage.height / scale;
-  const width = Math.min(960, Math.round(sourceWidth));
+  const width = Math.min(640, Math.round(sourceWidth));
   const height = Math.round(width * sourceHeight / sourceWidth);
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -57,7 +57,7 @@ function frameFromVideo(video: HTMLVideoElement): Promise<Blob> {
     sourceWidth, sourceHeight, 0, 0, width, height);
   return new Promise((resolve, reject) =>
     canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('No se pudo generar el fotograma.')),
-      'image/jpeg', 0.85));
+      'image/jpeg', 0.75));
 }
 
 export default function App({ onLogout, logoutBusy }: { onLogout: () => void; logoutBusy: boolean }) {
