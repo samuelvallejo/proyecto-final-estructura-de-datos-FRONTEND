@@ -132,7 +132,11 @@
 .drive-alert strong{font:800 15px Manrope,sans-serif}
 @media (prefers-reduced-motion:reduce){.box-symbol,.drive-alert,.card-skeleton span,.waterfall-bar.pending{animation:none}}
 
-/* Barra inferior con siete accesos */
+/* Información: panel de datos y estructuras en una sola sección */
+.info-switch{padding-top:20px;padding-bottom:0}.info-switch .segmented{margin-bottom:0}
+.info-switch+.page .page-heading{padding-top:16px}
+
+/* Barra inferior: seis accesos */
 .bottom-nav button span{white-space:nowrap}
-@media (max-width:400px){.bottom-nav button{font-size:8px}.bottom-nav button svg{width:20px;height:20px}}
+@media (max-width:400px){.bottom-nav button{font-size:9px}}
 @media (min-width:900px){.stat-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.general-map-stats .stat-tile strong{font-size:22px}}

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, ArrowRight, BarChart3, Bike, Camera, Car, Check, CirclePause, Clock3, Compass,
-  Crosshair, Footprints, LocateFixed, MapPin, MapPinned, Radar, RefreshCw, Route, ScanLine,
+  Crosshair, Footprints, Info, LocateFixed, MapPin, MapPinned, Radar, RefreshCw, Route, ScanLine,
   ShieldAlert, ShieldCheck, Sparkles, Square, UserRound, X, Code2, ArrowLeft, Home,
 } from 'lucide-react';
 import { ApiError, loadHealth, loadReports, loadStructures, patrolReport, scanFrame } from './services/api';
@@ -118,6 +118,8 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const [patrol, setPatrol] = useState<Report | null>(null);
   const [patrolBusy, setPatrolBusy] = useState(false);
   const history = useRef(new Stack<Tab>());
+  // «Información» agrupa el panel de datos y las estructuras; recuerda la última subsección abierta.
+  const infoView = useRef<'dashboard' | 'structures'>('dashboard');
   const [historySize, setHistorySize] = useState(0);
   const refreshSequence = useRef(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -475,6 +477,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   }
   function navigate(next: Tab) {
     if (next !== tab) { history.current.push(tab); setHistorySize(history.current.size); }
+    if (next === 'dashboard' || next === 'structures') infoView.current = next;
     if (next !== 'scan' && driveRef.current) void stopDrive();
     else if (next !== 'scan' && scanning) stop();
     setTab(next);
@@ -722,6 +725,13 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
             {hasMore && <button className="button-secondary" disabled={loadingReports} onClick={() => void refreshReports(sort, true)}>Cargar más reportes</button>}
           </div>
         )}
+        {(tab === 'dashboard' || tab === 'structures') && <div className="page info-switch">
+          <span className="eyebrow">INFORMACIÓN</span>
+          <div className="segmented" role="tablist" aria-label="Secciones de información">
+            <button role="tab" aria-selected={tab === 'dashboard'} onClick={() => navigate('dashboard')}><BarChart3 size={15} /> Panel de datos</button>
+            <button role="tab" aria-selected={tab === 'structures'} onClick={() => navigate('structures')}><Code2 size={15} /> Estructuras de datos</button>
+          </div>
+        </div>}
         {tab === 'structures' && <div className="page structures-page">
           <div className="page-heading"><div><span className="eyebrow">ESTRUCTURAS DE DATOS</span><h1>Así funciona <em>BacheScan.</em></h1></div></div>
           <Suspense fallback={<LoadingIndicator label="Preparando árboles…" />}><TreeExplorer onMap={showOnMap} defaultOpen /></Suspense>
@@ -744,9 +754,8 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
           <button className={tab === 'scan' || tab === 'photo' ? 'selected' : ''} aria-current={tab === 'scan' || tab === 'photo' ? 'page' : undefined} onClick={() => navigate('scan')}><ScanLine size={22} /><span>Escanear</span></button>
           <button className={tab === 'map' ? 'selected' : ''} aria-current={tab === 'map' ? 'page' : undefined} onClick={() => navigate('map')}><MapPin size={22} /><span>Mapa</span></button>
           <button className={tab === 'reports' ? 'selected' : ''} aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => navigate('reports')}><Route size={22} /><span>Reportes</span></button>
-          <button className={tab === 'dashboard' ? 'selected' : ''} aria-current={tab === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}><BarChart3 size={22} /><span>Panel</span></button>
+          <button className={tab === 'dashboard' || tab === 'structures' ? 'selected' : ''} aria-current={tab === 'dashboard' || tab === 'structures' ? 'page' : undefined} onClick={() => navigate(infoView.current)}><Info size={22} /><span>Información</span></button>
           <button className={tab === 'profile' || tab === 'trips' || tab === 'admin' ? 'selected' : ''} aria-current={tab === 'profile' ? 'page' : undefined} onClick={() => navigate('profile')}><UserRound size={22} /><span>Perfil</span></button>
-          <button className={tab === 'structures' ? 'selected' : ''} aria-current={tab === 'structures' ? 'page' : undefined} onClick={() => navigate('structures')}><Code2 size={22} /><span>Estructuras</span></button>
         </nav>
       </main>
     </div>
