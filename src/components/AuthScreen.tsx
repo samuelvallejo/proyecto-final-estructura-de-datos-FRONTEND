@@ -3,6 +3,8 @@ import type { FormEvent } from 'react';
 import { ArrowRight, Check, Eye, EyeOff, MapPin, ShieldCheck, Route } from 'lucide-react';
 import { authenticate, registerAccount } from '../services/api';
 import LoadingIndicator from './LoadingIndicator';
+import DemoAccounts from './DemoAccounts';
+import type { DemoAccount } from '../types';
 import '../auth.css';
 
 export default function AuthScreen({ onAuthenticated, initialNotice = '' }: { onAuthenticated: () => void; initialNotice?: string }) {
@@ -30,6 +32,14 @@ export default function AuthScreen({ onAuthenticated, initialNotice = '' }: { on
     } catch { setPassword(''); setConfirmation(''); setError(true); setNotice('No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'); }
     finally { setBusy(false); }
   }
+  async function enterWithDemo(account: DemoAccount) {
+    if (busy) return;
+    setMode('login'); setEmail(account.email); setPassword(account.password);
+    setBusy(true); setNotice(''); setError(false);
+    try { await authenticate(account.email, account.password); setEmail(''); setPassword(''); setNotice('Todo se ejecutó correctamente.'); onAuthenticated(); }
+    catch (cause) { setPassword(''); setError(true); setNotice((cause as Error).message || 'No se pudo completar la operación. Inténtalo de nuevo.'); }
+    finally { setBusy(false); }
+  }
   return <main className="auth-shell">
     <header className="auth-brand"><img src="/favicon.svg" alt="Logo BacheScan" /><span>BacheScan <b>AI</b></span><span className="auth-brand-caption">Vías más seguras, juntos.</span></header>
     <div className="auth-layout"><section className="auth-story" aria-label="Bienvenida a BacheScan"><span className="auth-eyebrow">CUIDEMOS EL CAMINO</span><h1>Un mejor camino<br />empieza <em>contigo.</em></h1><p>Detecta posibles baches, conoce su ubicación y comparte información que ayuda a cuidar las vías de tu comunidad.</p>
@@ -45,6 +55,7 @@ export default function AuthScreen({ onAuthenticated, initialNotice = '' }: { on
           <button className="auth-submit" type="submit">{busy ? <LoadingIndicator compact label={registering ? 'Creando cuenta…' : 'Iniciando sesión…'} /> : <>{registering ? 'Crear mi cuenta' : 'Iniciar sesión'}<ArrowRight size={19} /></>}</button>
         </fieldset></form>
         {notice && <p className={`auth-notice ${error ? 'error' : ''}`} role={error ? 'alert' : 'status'}>{notice}</p>}
+        {!registering && <DemoAccounts busy={busy} onUse={account => void enterWithDemo(account)} />}
         <aside className="form-guidance" id="auth-help"><strong>Antes de {registering ? 'registrarte' : 'iniciar sesión'}</strong>{registering ? <><p>Nombre: de 2 a 80 caracteres. Correo: una dirección válida, máximo 180 caracteres.</p><ul>{rules.map(([label, valid]) => <li key={label} className={valid ? 'complete' : ''}><Check size={14} aria-hidden="true" />{label}</li>)}</ul></> : <p>Escribe tu correo registrado y tu contraseña de 12 a 128 caracteres. Usa el ojo para revisar lo que escribes.</p>}<p>Los campos se detienen al alcanzar el máximo. No compartas tu contraseña. Cierra sesión al usar un dispositivo compartido.</p></aside>
       </section></div><footer className="auth-footer">BacheScan AI · Tecnología que acompaña a tu comunidad</footer>
   </main>;

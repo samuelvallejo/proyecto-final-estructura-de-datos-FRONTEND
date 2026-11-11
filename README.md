@@ -10,6 +10,18 @@ El componente `src/components/PhotoDetector.tsx` llama a `POST /api/detect/potho
 
 Los pesos `.pt`, PyTorch y Ultralytics permanecen en el backend; no se descargan ni ejecutan en el navegador. La foto no inventa coordenadas GPS ni crea reportes en el mapa. La cámara y los recorridos continúan usando el modelo personalizado `best.pt` del backend. La clase del archivo es `0`, mapeada explícitamente a `pothole` por la configuración del servidor.
 
+## Novedades: administración, perfil y modo conducción
+
+- **Acceso con cuentas demo**: debajo del formulario hay tres botones (Administrador, Operario, Conductor) y un desplegable con las credenciales para copiar y pegar. Solo aparecen si el backend tiene `DEMO_ACCOUNTS=true`.
+- **Icono de perfil automático**: el avatar de la cabecera muestra las iniciales con un color estable por persona y abre un menú con Mi perfil, Panel de datos, Administración (solo administradores) y Cerrar sesión.
+- **Mi perfil**: estadísticas de la cuenta, historial **por sesión** (duración, escaneos, baches y huella de eventos), historial de baches detectados y de baches por los que pasaste, y recorridos con su duración.
+- **Modo conducción (moto o carro)**: desde Escanear. Escaneo automático; el símbolo de bache aparece sobre cada hueco detectado en el video, con vibración y sonido. Avisa de baches conocidos a menos de 80 m, registra los pasos y, al terminar, muestra cuánto duró la sesión, los baches del trayecto y la distancia. Mantiene la pantalla encendida cuando el navegador lo permite.
+- **Mapa general**: en Mapa → Mapa general se ven todos los huecos registrados, incluidos los reparados, con cuántas personas han pasado por cada uno.
+- **Panel de datos**: cada bloque (totales, actividad diaria, riesgo, baches más transitados y velocidad del escaneo) se carga por separado; una línea de carga muestra cuándo llegó cada uno y cuánto tardó en red y en servidor.
+- **Administración**: resumen, usuarios (rol y acceso), baches (cambio de estado), sesiones, recorridos y huella de auditoría.
+- **Escaneo más rápido**: fotogramas de 512 px reutilizando el lienzo, el siguiente análisis se pide en cuanto el servidor lo permite (descontando la latencia) y se omiten fotogramas casi idénticos cuando el vehículo está detenido.
+- **Errores del servidor**: el cliente HTTP ahora muestra el mensaje real del backend (antes leía la respuesta dos veces y siempre mostraba un texto genérico).
+
 ## Desarrollo
 
 Ejecuta `npm ci` y `npm run dev`. Vite reenvía `/api` al backend Python de `http://127.0.0.1:3001`. Configura allí PostgreSQL, `DATA_ENCRYPTION_KEY` privada y `SECURE_COOKIES=false` exclusivamente en desarrollo. En producción, Vercel reenvía `/api` a Azure Container Apps mediante `vercel.json`, manteniendo las cookies en el mismo origen. Ya no se utiliza `VITE_API_URL`.

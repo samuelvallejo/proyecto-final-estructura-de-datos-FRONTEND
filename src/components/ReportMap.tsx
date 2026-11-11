@@ -6,6 +6,7 @@ import type { Position, Report, Trip } from '../types';
 import { LocateFixed, Maximize2 } from 'lucide-react';
 import type { GraphEdge } from '../types/graphs';
 import { edgeKey, pathEdges } from '../services/graphView';
+import { peopleText, statusText } from '../services/format';
 
 interface Props { reports: Report[]; location: Position | null; focus?: Report | null; onSelect?: (report: Report) => void; trip?: Trip | null; connections?: GraphEdge[]; connectionPath?: string[] }
 export default function ReportMap({ reports, location, focus, onSelect, trip, connections, connectionPath }: Props) {
@@ -72,7 +73,12 @@ export default function ReportMap({ reports, location, focus, onSelect, trip, co
       title.textContent = 'Este hueco es peligroso, cuidado';
       popup.append(title);
       const levels = { LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto', CRITICAL: 'Crítico' };
+      const people = document.createElement('div');
+      people.className = 'popup-people';
+      people.textContent = `${peopleText(report.peopleCount)}${report.passCount ? ` · ${report.passCount} pasos` : ''}`;
+      popup.append(people);
       for (const text of [
+        report.status !== 'UNVERIFIED' ? `Estado: ${statusText[report.status] || report.status}` : '',
         `Riesgo ${levels[report.hazardLevel]}: ${report.hazardScore}/100`,
         [report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', '),
         `${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}`,

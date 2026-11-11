@@ -10,11 +10,11 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.headers.get('content-type')?.includes('application/json')) {
     throw new Error('No se pudo completar la operación. Inténtalo de nuevo.');
   }
-  const body = await response.json().catch(() => ({}));
+  // El cuerpo solo puede leerse una vez: se reutiliza para el mensaje de error del servidor.
+  const body = await response.json().catch(() => ({})) as { error?: unknown };
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith('/auth/')) window.dispatchEvent(new Event('bachescan-session-expired'));
-    const body = await response.json().catch(() => ({})) as { error?: string };
-    throw new ApiError(body.error || (response.status === 429 ? 'No se pudo completar la operación. Espera un momento e inténtalo de nuevo.' : 'No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'), response.status);
+    throw new ApiError((typeof body.error === 'string' && body.error) || (response.status === 429 ? 'No se pudo completar la operación. Espera un momento e inténtalo de nuevo.' : 'No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'), response.status);
   }
   return body as T;
 }
@@ -37,9 +37,10 @@ export async function detectPotholes(image: File, signal: AbortSignal): Promise<
       || item.bbox[0] >= item.bbox[2] || item.bbox[1] >= item.bbox[3])) throw new Error('No se pudo interpretar el resultado. Inténtalo de nuevo.');
   return response;
 }
-export async function scanFrame(frame: Blob, location: Position | null, signal: AbortSignal, tripId?: string): Promise<ScanResponse> {
+export async function scanFrame(frame: Blob, location: Position | null, signal: AbortSignal, tripId?: string, mode: 'live' | 'still' = 'live'): Promise<ScanResponse> {
   const form = new FormData();
   form.append('frame', frame, 'fotograma.jpg');
+  form.append('mode', mode);
   if (tripId) form.append('tripId', tripId);
   if (location && (!location.capturedAt || Date.now() - location.capturedAt < 15000)) {
     form.append('lat', String(location.lat));
