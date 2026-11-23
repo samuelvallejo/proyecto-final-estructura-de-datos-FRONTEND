@@ -8,7 +8,7 @@ Desde Inicio elige **Analizar una fotografía**, o desde Escanear cambia de Cám
 
 El componente `src/components/PhotoDetector.tsx` llama a `POST /api/detect/potholes` con `multipart/form-data` (campo `image`) y la cookie de sesión. Las coordenadas en píxeles se convierten a porcentajes del tamaño original orientado, manteniendo los rectángulos alineados al redimensionar la imagen. Se muestran confianza, conteo y ausencia de detecciones. Los errores usan mensajes fijos y no exponen datos internos.
 
-Los pesos `.pt`, PyTorch y Ultralytics permanecen en el backend; no se descargan ni ejecutan en el navegador. La foto no inventa coordenadas GPS ni crea reportes en el mapa. La cámara y los recorridos continúan usando el modelo personalizado `best.pt` del backend. La clase del archivo es `0`, mapeada explícitamente a `pothole` por la configuración del servidor.
+La fotografía se analiza en el servidor con `best.pt` (PyTorch y Ultralytics no se ejecutan en el navegador). La foto no inventa coordenadas GPS ni crea reportes en el mapa. La cámara y los recorridos usan una exportación ONNX del mismo modelo en el teléfono (ver «YOLO en el teléfono») y el servidor confirma cada hallazgo antes de guardarlo.
 
 ## Novedades: administración, perfil y modo conducción
 
@@ -21,6 +21,18 @@ Los pesos `.pt`, PyTorch y Ultralytics permanecen en el backend; no se descargan
 - **Administración**: resumen, usuarios (rol y acceso), baches (cambio de estado), sesiones, recorridos y huella de auditoría.
 - **Escaneo más rápido**: fotogramas de 512 px reutilizando el lienzo, el siguiente análisis se pide en cuanto el servidor lo permite (descontando la latencia) y se omiten fotogramas casi idénticos cuando el vehículo está detenido.
 - **Errores del servidor**: el cliente HTTP ahora muestra el mensaje real del backend (antes leía la respuesta dos veces y siempre mostraba un texto genérico).
+
+## YOLO en el teléfono (escaneo rápido en vehículo)
+
+El escaneo en vivo y el modo conducción ejecutan YOLO **en el propio dispositivo** con ONNX Runtime Web, dentro de un Web Worker, usando la GPU del teléfono (WebGPU) o su CPU (WebAssembly) si no hay GPU disponible.
+
+- Cada fotograma se analiza en cuanto termina el anterior, sin esperar al servidor. Con el video de prueba: 16–25 FPS y 22–27 ms por fotograma en un portátil; en un teléfono depende de su GPU.
+- Los recuadros siguen a cada bache entre fotogramas («Bache 0.81») y el símbolo de bache aparece encima. Un bache cuenta cuando se ve en dos fotogramas seguidos, lo que evita falsos positivos de un solo cuadro.
+- Solo cuando aparece un bache nuevo se envía ese fotograma al servidor, que lo confirma con el mismo modelo y lo guarda con el GPS.
+- Si el navegador no puede cargar el modelo, se usa automáticamente el escaneo por servidor anterior.
+- **Probar la detección con un video** (en Escanear) reproduce un video elegido por el usuario con la misma detección, sin GPS ni reportes.
+
+El modelo es `public/models/pothole-live.onnx` (bachescan-v2 exportado a 416 px) y `public/models/pothole-live.json` indica su tamaño de entrada, el preprocesado («stretch»: imagen estirada al cuadrado, como en el entrenamiento) y el umbral. El entrenamiento y la atribución de los datasets están en `backend/training/README.md`. Pruebas: `tests/yolo.test.ts` (preprocesado, decodificación de la salida, supresión de no máximos y seguimiento).
 
 ## Desarrollo
 

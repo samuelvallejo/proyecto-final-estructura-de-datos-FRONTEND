@@ -1,0 +1,7 @@
+{
+  "model": "pothole-live.onnx",
+  "size": 416,
+  "resize": "stretch",
+  "threshold": 0.25,
+  "source": "bachescan-v2: best.pt ajustado con 3 datasets públicos de baches (CC BY 4.0); ver backend/training/README.md"
+}

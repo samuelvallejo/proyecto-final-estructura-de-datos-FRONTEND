@@ -132,6 +132,16 @@
 .drive-alert strong{font:800 15px Manrope,sans-serif}
 @media (prefers-reduced-motion:reduce){.box-symbol,.drive-alert,.card-skeleton span,.waterfall-bar.pending{animation:none}}
 
+/* Detección en el dispositivo y video de prueba */
+.detection-box.live{box-shadow:none;border-width:2px;border-radius:4px;transition:left .08s linear,top .08s linear,width .08s linear,height .08s linear}
+.detection-box.live span{font-size:10px;letter-spacing:.2px;padding:2px 5px;border-radius:3px 3px 0 0}
+.detection-box.live.risk-critical,.detection-box.live.risk-high{border-color:#ffdc65}
+.detection-box.live .box-symbol{animation:none;opacity:.92}
+.video-test{background:#fff;border:1px solid #dce6d1;border-radius:18px;padding:16px 18px;margin:0 0 18px;display:grid;gap:8px}
+.video-test h2{font:800 15px Manrope,sans-serif}.video-test p{font-size:11.5px;line-height:1.5;color:#6c7a6c}
+.video-test .action-row{margin-top:2px}
+.file-button{position:relative;cursor:pointer}.file-button input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
 /* Información: panel de datos y estructuras en una sola sección */
 .info-switch{padding-top:20px;padding-bottom:0}.info-switch .segmented{margin-bottom:0}
 .info-switch+.page .page-heading{padding-top:16px}

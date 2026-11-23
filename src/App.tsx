@@ -24,6 +24,9 @@ import NearbyHazards from './components/NearbyHazards';
 import PotholeSymbol from './components/PotholeSymbol';
 import ProfileAvatar from './components/ProfileAvatar';
 import useCommunityFeed from './hooks/useCommunityFeed';
+import { useLocalDetector, useLocalScanLoop } from './hooks/useLocalDetector';
+import { hazardFromArea, track } from './services/yolo';
+import type { LocalBox, TrackedBox } from './services/yolo';
 import './features.css';
 const TripHistory = lazy(() => import('./components/TripHistory'));
 const PhotoDetector = lazy(() => import('./components/PhotoDetector'));
@@ -126,6 +129,19 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const locationRef = useRef<Position | null>(null);
   const locationDenied = useRef(false);
   const pendingPotholeFrame = useRef<{ frame: Blob; capturedAt: number } | null>(null);
+  // Detección en el dispositivo: YOLO analiza cada fotograma sin esperar al servidor (como en un video en vivo).
+  const [testVideo, setTestVideo] = useState<string | null>(null);
+  const [liveBoxes, setLiveBoxes] = useState<TrackedBox[]>([]);
+  const [localStats, setLocalStats] = useState({ fps: 0, inferenceMs: 0, potholes: 0 });
+  const [localFailed, setLocalFailed] = useState(false);
+  const detector = useLocalDetector(tab === 'scan');
+  const useLocal = detector.status === 'ready' && !localFailed;
+  const trackRef = useRef<TrackedBox[]>([]);
+  const trackIds = useRef(0);
+  const countedTracks = useRef(new Set<number>());
+  const reportBusy = useRef(false);
+  const lastReportAt = useRef(0);
+  const testVideoRef = useRef<string | null>(null);
 
   async function refreshReports(mode: 'recent' | 'priority' = sort, append = false) {
     const sequence = ++refreshSequence.current;
@@ -266,6 +282,16 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     let stream: MediaStream | null = null;
     const video = videoRef.current;
 
+    if (testVideo && video) {
+      // Video de prueba: misma detección que con la cámara, sin GPS ni reportes.
+      video.srcObject = null;
+      video.src = testVideo;
+      video.loop = true;
+      video.muted = true;
+      void video.play().then(() => { if (!cancelled) setCameraReady(true); })
+        .catch(() => { if (!cancelled) { setError('No se pudo reproducir el video.'); setScanning(false); } });
+      return () => { cancelled = true; video.pause(); video.removeAttribute('src'); video.load(); setCameraReady(false); };
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
       return;
     }
@@ -293,7 +319,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
       setCameraReady(false);
       if (video) video.srcObject = null;
     };
-  }, [scanning, tab]);
+  }, [scanning, tab, testVideo]);
 
   function alertDriver(text: string) {
     setDriveAlert({ text, at: Date.now() });
@@ -301,8 +327,9 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     beep();
   }
 
+  // Respaldo por servidor: solo cuando el detector del dispositivo no está disponible.
   useEffect(() => {
-    if (!scanning || !cameraReady || tab !== 'scan') return;
+    if (!scanning || !cameraReady || tab !== 'scan' || useLocal || detector.status === 'loading') return;
     let cancelled = false;
     let firstFrame = true;
     let skipped = 0;
@@ -381,7 +408,75 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     }
     timer = setTimeout(analyze, 300);
     return () => { cancelled = true; clearTimeout(timer); clearTimeout(overlayTimer); controller.abort(); setAnalyzing(false); };
-  }, [scanning, cameraReady, tab]);
+  }, [scanning, cameraReady, tab, useLocal, detector.status]);
+
+  /** Envía al servidor el fotograma con baches para guardarlo con GPS; el servidor confirma con el mismo modelo. */
+  async function reportLocalDetection() {
+    const video = videoRef.current;
+    if (!video || reportBusy.current || testVideoRef.current || Date.now() - lastReportAt.current < 1200) return;
+    reportBusy.current = true;
+    lastReportAt.current = Date.now();
+    try {
+      const frame = await frameFromVideo(video);
+      const response = await scanFrame(frame, locationRef.current, new AbortController().signal, tripIdRef.current, 'live');
+      setLastScan(response);
+      if (response.result.isPothole) {
+        saveReportedFinding(response);
+        if (!response.report) pendingPotholeFrame.current = { frame, capturedAt: Date.now() };
+      }
+    } catch (cause) {
+      if (!(cause instanceof ApiError && cause.status === 429)) setError((cause as Error).message);
+    } finally {
+      reportBusy.current = false;
+    }
+  }
+
+  const handleLocalResult = useCallback((boxes: LocalBox[], stats: { inferenceMs: number; fps: number }) => {
+    const tracked = track(trackRef.current, boxes, () => ++trackIds.current);
+    trackRef.current = tracked;
+    setLiveBoxes(tracked);
+    setScanCount(current => current + 1);
+    // Un bache cuenta cuando aparece en dos fotogramas seguidos: evita falsos positivos de un solo cuadro.
+    const fresh = tracked.filter(box => box.hits >= 2 && box.score >= .35 && !countedTracks.current.has(box.id));
+    fresh.forEach(box => countedTracks.current.add(box.id));
+    setLocalStats(current => ({ fps: stats.fps, inferenceMs: stats.inferenceMs, potholes: current.potholes + fresh.length }));
+    if (fresh.length) {
+      setLastCheck(new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      if (driveRef.current) {
+        setDriveDetected(current => current + fresh.length);
+        alertDriver(fresh.length > 1 ? `¡${fresh.length} baches adelante!` : '¡Bache adelante!');
+      }
+      void reportLocalDetection();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handleLocalError = useCallback(() => {
+    setLocalFailed(true);
+    setLiveBoxes([]);
+  }, []);
+  useLocalScanLoop({ videoRef, active: scanning && cameraReady && tab === 'scan' && useLocal, detect: detector.detect,
+    threshold: detector.threshold, onResult: handleLocalResult, onError: handleLocalError });
+
+  function startTestVideo(file: File | undefined) {
+    if (!file) return;
+    if (testVideoRef.current) URL.revokeObjectURL(testVideoRef.current);
+    const url = URL.createObjectURL(file);
+    testVideoRef.current = url;
+    setError(''); setFinding(null); setLastScan(null); setOverlay(null);
+    resetLocalTracking();
+    setTestVideo(url);
+    setScanning(true);
+  }
+  function stopTestVideo() {
+    stop();
+    if (testVideoRef.current) URL.revokeObjectURL(testVideoRef.current);
+    testVideoRef.current = null;
+    setTestVideo(null);
+  }
+  function resetLocalTracking() {
+    trackRef.current = []; countedTracks.current = new Set();
+    setLiveBoxes([]); setLocalStats({ fps: 0, inferenceMs: 0, potholes: 0 }); setScanCount(0);
+  }
 
   // Reloj del modo conducción y vigencia de la alerta.
   useEffect(() => {
@@ -430,6 +525,8 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     setFinding(null);
     pendingPotholeFrame.current = null;
     setLastScan(null); setOverlay(null); setScanCount(0); setSkippedFrames(0); setLastCheck('');
+    resetLocalTracking();
+    if (testVideoRef.current) { URL.revokeObjectURL(testVideoRef.current); testVideoRef.current = null; setTestVideo(null); }
     // Solicitar GPS durante el toque que inicia el escaneo mejora el permiso en Safari móvil.
     retryLocation();
     setScanning(true);
@@ -441,6 +538,8 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     setAnalyzing(false);
     setFinding(null);
     setOverlay(null);
+    setLiveBoxes([]);
+    trackRef.current = [];
   }
   async function startDrive(vehicle: Vehicle) {
     driveRef.current = vehicle;
@@ -569,13 +668,22 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
               <div className="action-row"><button className="button-secondary" onClick={() => setDriveSummary(null)}><X size={16} /> Cerrar</button><button className="button-primary" onClick={() => navigate('profile')}><UserRound size={16} /> Ver en mi perfil</button></div>
             </section>}
 
+            {!driving && <section className="video-test" aria-labelledby="video-test-title">
+              <h2 id="video-test-title">Probar la detección con un video</h2>
+              <p>Elige un video grabado desde un vehículo: YOLO marca cada hueco en cada fotograma, igual que en el escaneo en vivo. No guarda reportes.</p>
+              <div className="action-row">
+                <label className="button-secondary file-button">Elegir video<input type="file" accept="video/*" onChange={event => { startTestVideo(event.target.files?.[0]); event.target.value = ''; }} /></label>
+                {testVideo && <button className="button-primary" onClick={stopTestVideo}><Square size={15} /> Detener video</button>}
+              </div>
+            </section>}
+
             {!driving && <TripPanel position={location} trip={activeTrip} onUpdate={updateTrip} onStart={start} onStop={stop} onGps={retryLocation} gpsBusy={requestingLocation} analyzing={analyzing} scanning={scanning} />}
 
             {driving && <section className="drive-hud" aria-label="Panel de conducción">
               <div><Clock3 size={16} /><b>{durationText(now - driveStartedAt)}</b><small>tiempo</small></div>
               <div><MapPinned size={16} /><b>{driveDetected}</b><small>detectados</small></div>
               <div><Footprints size={16} /><b>{drivePassed}</b><small>conocidos</small></div>
-              <div><Activity size={16} /><b>{scanLatency ? `${scanLatency} ms` : '—'}</b><small>análisis</small></div>
+              <div><Activity size={16} /><b>{useLocal ? (localStats.fps ? `${Math.round(localStats.fps)} FPS` : '—') : scanLatency ? `${scanLatency} ms` : '—'}</b><small>{useLocal ? 'en vivo' : 'análisis'}</small></div>
             </section>}
 
             <section className={`camera-stage ${scanning ? 'is-live' : ''} ${driving ? 'drive-stage' : ''}`}>
@@ -591,7 +699,10 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
               <div className="scan-corner top-left" /><div className="scan-corner top-right" />
               <div className="scan-corner bottom-left" /><div className="scan-corner bottom-right" />
               {scanning && <div className="scan-beam" />}
-              {scanning && overlayDetections.map((detection, index) => detection.boundingBox && <div key={index} className="detection-box" style={{
+              {scanning && useLocal && liveBoxes.map(box => <div key={box.id} className={`detection-box live risk-${hazardFromArea(box).level.toLowerCase()}`} style={{
+                left: `${box.x1 * 100}%`, top: `${box.y1 * 100}%`, width: `${(box.x2 - box.x1) * 100}%`, height: `${(box.y2 - box.y1) * 100}%`,
+              }}><span>Bache {box.score.toFixed(2)}</span>{box.hits >= 2 && <i className="box-symbol"><PotholeSymbol size={Math.max(20, Math.min(driving ? 52 : 40, (box.x2 - box.x1) * 220))} /></i>}</div>)}
+              {scanning && !useLocal && overlayDetections.map((detection, index) => detection.boundingBox && <div key={index} className="detection-box" style={{
                 left: `${detection.boundingBox.xmin / 10}%`, top: `${detection.boundingBox.ymin / 10}%`,
                 width: `${(detection.boundingBox.xmax - detection.boundingBox.xmin) / 10}%`,
                 height: `${(detection.boundingBox.ymax - detection.boundingBox.ymin) / 10}%`,
@@ -601,12 +712,12 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
               {scanning && !cameraReady && <div className="camera-preparing"><LoadingIndicator label="Preparando cámara…" /></div>}
               <div className="stage-top">
                 <span className={`live-tag ${scanning ? 'active' : ''}`}>
-                  <span className="live-dot" /> {driving ? `EN ${driveVehicle === 'moto' ? 'MOTO' : 'CARRO'}` : scanning ? 'EN VIVO' : 'CÁMARA LISTA'}
+                  <span className="live-dot" /> {driving ? `EN ${driveVehicle === 'moto' ? 'MOTO' : 'CARRO'}` : testVideo ? 'VIDEO DE PRUEBA' : scanning ? 'EN VIVO' : 'CÁMARA LISTA'}
                 </span>
                 <span className="stage-gps"><MapPin size={12} /> {location ? `GPS ±${Math.round(location.accuracy)} m` : 'GPS pendiente'}</span>
               </div>
               {scanning && (
-                <div className="stage-bottom">{analyzing ? <LoadingIndicator compact label="Analizando fotograma…" /> : <><Activity size={15} />{lastCheck ? `Último análisis: ${lastCheck}` : 'Buscando daños en la vía…'}</>}</div>
+                <div className="stage-bottom">{useLocal ? <><Activity size={15} />{`YOLO en el dispositivo · ${Math.round(localStats.fps)} FPS · ${liveBoxes.length} en pantalla`}</> : analyzing ? <LoadingIndicator compact label="Analizando fotograma…" /> : <><Activity size={15} />{lastCheck ? `Último análisis: ${lastCheck}` : 'Buscando daños en la vía…'}</>}</div>
               )}
             </section>
 
@@ -615,7 +726,13 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
             {error && <div className="message error"><AlertTriangle size={17} /><span>{error}</span><button onClick={() => setError('')} aria-label="Cerrar"><X size={16} /></button></div>}
             {locationError && scanning && <div className="message warning"><LocateFixed size={17} /><span>{locationError}</span></div>}
             {locationError && scanning && <button className="button-secondary gps-retry" onClick={retryLocation} disabled={requestingLocation}>{requestingLocation ? <LoadingIndicator compact label="Solicitando ubicación…" /> : <><LocateFixed size={16} /> Reintentar ubicación</>}</button>}
-            {scanning && <div className="scan-feedback" role="status" aria-live="polite">
+            {scanning && useLocal && <div className="scan-feedback" role="status" aria-live="polite">
+              <strong>{liveBoxes.length ? `${liveBoxes.length} ${liveBoxes.length === 1 ? 'bache' : 'baches'} en pantalla` : 'Buscando baches en la vía…'}</strong>
+              <span>{localStats.potholes} baches distintos detectados · {scanCount} fotogramas · {Math.round(localStats.fps)} FPS · {localStats.inferenceMs} ms por fotograma ({detector.backend === 'webgpu' ? 'GPU del teléfono' : 'CPU del teléfono'})</span>
+              {testVideo && <p>Modo video de prueba: no se guardan reportes ni se usa el GPS.</p>}
+            </div>}
+            {scanning && !useLocal && detector.status === 'loading' && <div className="scan-feedback" role="status"><LoadingIndicator compact label="Cargando YOLO en el dispositivo…" /></div>}
+            {scanning && !useLocal && detector.status !== 'loading' && <div className="scan-feedback" role="status" aria-live="polite">
               <strong>{analyzing ? 'Analizando la imagen…' : lastScan?.result.isPothole ? `${lastScan.detections?.length || 1} posibles daños detectados` : lastScan ? 'No se detectó daño en este fotograma' : 'Preparando cámara y GPS…'}</strong>
               <span>{scanCount} fotogramas analizados{scanLatency ? ` · ${scanLatency} ms por análisis` : ''}{skippedFrames ? ` · ${skippedFrames} omitidos sin movimiento` : ''}{lastCheck ? ` · ${lastCheck}` : ''}</span>
               {lastScan && !lastScan.result.isPothole && !driving && <p>Enfoca la vía, acerca el hueco y mantén el celular quieto. El escaneo continúa.</p>}
