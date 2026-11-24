@@ -119,6 +119,16 @@ Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** 
 | `src/data-structures/LruCache.ts` | Caché LRU: tabla hash + lista doblemente enlazada | Reutiliza durante un minuto las últimas 30 respuestas de la búsqueda al escribir y borrar letras |
 | `src/data-structures/Stack.ts` | Pila | Historial del botón «Volver» (ya existía) |
 
-Pruebas: `tests/routeList.test.ts` y `tests/lruCache.test.ts`, con secuencias aleatorias comparadas contra un modelo de referencia.
+### Patrones de diseño del frontend
+
+| Patrón | Dónde | Para qué |
+|---|---|---|
+| **Observer** | `src/patterns/Observable.ts`, `src/hooks/useObservable.ts` | `RouteList` avisa tras cada cambio y React se vuelve a dibujar con `useSyncExternalStore`, sin contadores artificiales |
+| **Command** | `src/patterns/CommandHistory.ts`, `src/services/routeCommands.ts` | «Visitado» y «Dejar para el final» son comandos con `undo`; el botón «Deshacer» revierte el último en O(1) |
+| **Iterator** | `RouteList` y `LruCache` implementan `Symbol.iterator` | Recorrer las paradas o las entradas de la caché sin exponer sus nodos |
+| **Adapter** | `planToRouteItems` en `src/services/operator.ts` | Convierte el plan de la API en elementos de la lista de ruta |
+| **Strategy** (backend) | selector «Algoritmo» del plan de jornada | Elige la estrategia de ruta del backend (`two-opt`, vecino más cercano o prioridad) y compara distancias |
+
+Pruebas: `tests/routeList.test.ts` y `tests/lruCache.test.ts` y `tests/patterns.test.ts`, con secuencias aleatorias comparadas contra un modelo de referencia.
 
 Archivos: `src/components/operator/`, `src/services/operator.ts`, `src/types/operator.ts`, `src/operator.css` y `tests/operator.test.ts`. El Conductor no ve la sección y el backend le responde 403.
