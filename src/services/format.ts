@@ -12,6 +12,7 @@ export class Formatter {
     'photo.analyzed': 'Analizó una fotografía', 'admin.user.role': 'Cambió el rol de una cuenta',
     'admin.user.active': 'Cambió el acceso de una cuenta', 'admin.report.status': 'Cambió el estado de un bache',
     'operator.report.status': 'Actualizó el estado de un bache en mantenimiento',
+    'operator.duplicates.merged': 'Fusionó reportes duplicados de un bache',
   };
   private static readonly avatarPalette = ['#2f6b45', '#8a5a14', '#3d5f8f', '#7c3f62', '#4f6b1d', '#a04d2f', '#2d6a6a', '#5b4b8a'];
 

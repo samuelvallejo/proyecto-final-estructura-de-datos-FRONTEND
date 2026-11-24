@@ -14,3 +14,10 @@ export interface DayPlan {
 }
 export interface TransitionResult { report: Report; allowedTransitions: ReportStatus[] }
 export interface StatusEvent { id: string; at: number; from: string; to: ReportStatus; reason: string; actorName: string }
+export interface DuplicateCluster { canonical: Report; duplicates: Report[]; size: number; maxSpanMeters: number }
+export interface DuplicateReview {
+  clusters: DuplicateCluster[]; generatedAt: number;
+  stats: { potholes: number; indexed: number; skipped: number; closePairs: number; candidateChecks: number; bruteForceChecks: number;
+    clusters: number; duplicates: number; estimatedPhysicalPotholes: number; radiusMeters: number };
+}
+export interface MergeResult { report: Report; merged: number; passesMoved: number }

@@ -1,6 +1,6 @@
 import { ApiClient } from './api.ts';
 import type { Me, Position, ReportStatus, Role } from '../types';
-import type { DayPlan, PriorityBreakdown, PriorityComponent, StatusEvent, TransitionResult, WorkQueue } from '../types/operator';
+import type { DayPlan, DuplicateReview, MergeResult, PriorityBreakdown, PriorityComponent, StatusEvent, TransitionResult, WorkQueue } from '../types/operator';
 import type { GraphEdge } from '../types/graphs';
 
 /** HTTP client of the maintenance workspace (/api/operator). */
@@ -22,6 +22,14 @@ export class OperatorApi {
   static loadStatusTimeline(reportId: string): Promise<{ events: StatusEvent[] }> {
     return ApiClient.request<{ events: StatusEvent[] }>(`/operator/reports/${encodeURIComponent(reportId)}/timeline`);
   }
+
+  static loadDuplicates(radius: number, signal?: AbortSignal): Promise<DuplicateReview> {
+    return ApiClient.request<DuplicateReview>(`/operator/duplicates?radius=${radius}`, { signal });
+  }
+
+  static mergeDuplicates(canonicalReportId: string, duplicateReportIds: string[]): Promise<MergeResult> {
+    return ApiClient.request<MergeResult>('/operator/duplicates/merge', ApiClient.jsonPost({ canonicalReportId, duplicateReportIds }));
+  }
 }
 
 /** Pure presentation rules of the maintenance workspace (no network, easy to test). */
@@ -40,6 +48,12 @@ export class OperatorView {
 
   static canUseMaintenance(me: Pick<Me, 'role'> | null | undefined): boolean {
     return Boolean(me && OperatorView.FIELD_ROLES.includes(me.role));
+  }
+
+  /** Share of pair checks avoided by the spatial grid compared with comparing every pair. */
+  static checksAvoidedPercent(stats: Pick<DuplicateReview['stats'], 'candidateChecks' | 'bruteForceChecks'>): number {
+    if (stats.bruteForceChecks <= 0) return 0;
+    return Math.round(1000 * (1 - stats.candidateChecks / stats.bruteForceChecks)) / 10;
   }
 
   /** Width percentage of each score component for a stacked bar (sums to the score). */
