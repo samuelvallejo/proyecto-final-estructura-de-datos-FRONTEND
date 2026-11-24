@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import {
   Activity, AlertTriangle, ArrowRight, BarChart3, Bike, Camera, Car, Check, CirclePause, Clock3, Compass,
   Crosshair, Footprints, Info, LocateFixed, MapPin, MapPinned, Radar, RefreshCw, Route, ScanLine,
-  ShieldAlert, ShieldCheck, Sparkles, Square, UserRound, X, Code2, ArrowLeft, Home,
+  ShieldAlert, ShieldCheck, Sparkles, Square, UserRound, X, Code2, ArrowLeft, Home, Wrench,
 } from 'lucide-react';
 import { ApiClient, ApiError } from './services/api';
 import { TripApi } from './services/trips';
@@ -10,6 +10,7 @@ import { ProfileApi } from './services/profile';
 import { FrameSampler } from './services/frames';
 import { Formatter } from './services/format';
 import { GpsTools } from './services/community';
+import { OperatorView } from './services/operator';
 import type { Health, Me, Position, Report, ScanResponse, StructureStats, Trip, Vehicle } from './types';
 import { Stack } from './data-structures/Stack';
 const ReportMap = lazy(() => import('./components/ReportMap'));
@@ -37,14 +38,15 @@ const GraphExplorer = lazy(() => import('./components/graphs/GraphExplorer'));
 const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const OperatorPanel = lazy(() => import('./components/operator/OperatorPanel'));
 
-type Tab = 'home' | 'scan' | 'photo' | 'map' | 'reports' | 'structures' | 'trips' | 'profile' | 'dashboard' | 'admin';
+type Tab = 'home' | 'scan' | 'photo' | 'map' | 'reports' | 'structures' | 'trips' | 'profile' | 'dashboard' | 'admin' | 'operator';
 const structureLabels: Record<string, string> = {
   array: 'Arrays', singlyLinkedList: 'Lista simple', doublyLinkedList: 'Lista doble',
   circularSinglyLinkedList: 'Lista circular simple', circularDoublyLinkedList: 'Lista circular doble',
   queue: 'Colas FIFO', deque: 'Cola de doble extremo', stack: 'Pila LIFO',
   binarySearchTree: 'Árbol binario de búsqueda', generalTree: 'Árbol de ubicaciones',
-  graph: 'Grafo de cercanía entre baches',
+  graph: 'Grafo de cercanía entre baches', indexedBinaryHeap: 'Montículo binario indexado',
 };
 /** Distance to a known pothole that triggers an alert while driving. */
 const KNOWN_POTHOLE_ALERT_METERS = 80;
@@ -637,6 +639,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
           <button onClick={() => navigate('profile')}><UserRound size={27} /><strong>Mi perfil e historial</strong><span>Tus sesiones con duración, tus recorridos y el historial de baches.</span><ArrowRight size={20} /></button>
           <button onClick={() => navigate('trips')}><Route size={27} /><strong>Mis recorridos</strong><span>Consulta tus caminos guardados y los baches encontrados.</span><ArrowRight size={20} /></button>
           <button onClick={() => navigate('reports')}><ShieldAlert size={27} /><strong>Explorar reportes</strong><span>Busca por lugar o riesgo y consulta la información de cada hallazgo.</span><ArrowRight size={20} /></button>
+          {OperatorView.canUseMaintenance(me) && <button className="home-operator" onClick={() => navigate('operator')}><Wrench size={27} /><strong>Mantenimiento vial</strong><span>Cola de baches por prioridad, plan de la jornada y cambio de estados.</span><ArrowRight size={20} /></button>}
           {me?.isAdmin && <button className="home-admin" onClick={() => navigate('admin')}><ShieldCheck size={27} /><strong>Administración</strong><span>Usuarios, roles, estados de baches, sesiones y huella de auditoría.</span><ArrowRight size={20} /></button>}
         </div><section className="getting-started"><h2>Tu primer recorrido, en tres pasos</h2><ol><li><b>Permite cámara y ubicación.</b> Acepta los permisos cuando el navegador los solicite.</li><li><b>Elige moto o carro y fija el celular.</b> El modo conducción escanea solo y te avisa.</li><li><b>Finaliza al llegar.</b> Verás cuánto tardaste y cuántos baches hubo en el trayecto.</li></ol><p className="form-help">La IA identifica posibles daños y estima su riesgo visual. Los reportes requieren verificación. Configura el teléfono antes de conducir y mantén la aplicación abierta.</p></section></div>}
 
@@ -868,6 +871,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
         {tab === 'trips' && <div className="page trips-page"><div className="page-heading"><div><span className="eyebrow">TUS CAMINOS GUARDADOS</span><h1>Mis <em>recorridos.</em></h1></div></div><p className="section-description">Consulta tus recorridos de A a B y tus sesiones de conducción. Cada uno conserva la trayectoria GPS, cuánto duró y los baches del trayecto. Solo tu cuenta puede consultar estos caminos.</p><Suspense fallback={<LoadingIndicator label="Cargando recorridos…" />}><TripHistory /></Suspense></div>}
         {tab === 'profile' && <Suspense fallback={<LoadingIndicator label="Cargando perfil…" />}><ProfilePage me={me} onRefresh={onRefreshMe} onMap={showOnMap} /></Suspense>}
         {tab === 'dashboard' && <Suspense fallback={<LoadingIndicator label="Preparando panel…" />}><Dashboard onMap={showOnMap} /></Suspense>}
+        {tab === 'operator' && <Suspense fallback={<LoadingIndicator label="Preparando mantenimiento…" />}><OperatorPanel me={me} location={location} onMap={showOnMap} /></Suspense>}
         {tab === 'admin' && <Suspense fallback={<LoadingIndicator label="Preparando administración…" />}><AdminPanel me={me} onMap={showOnMap} /></Suspense>}
         <nav className="bottom-nav" aria-label="Navegación principal">
           <button className={tab === 'home' ? 'selected' : ''} aria-current={tab === 'home' ? 'page' : undefined} onClick={() => navigate('home')}><Home size={22} /><span>Inicio</span></button>
@@ -875,7 +879,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
           <button className={tab === 'map' ? 'selected' : ''} aria-current={tab === 'map' ? 'page' : undefined} onClick={() => navigate('map')}><MapPin size={22} /><span>Mapa</span></button>
           <button className={tab === 'reports' ? 'selected' : ''} aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => navigate('reports')}><Route size={22} /><span>Reportes</span></button>
           <button className={tab === 'dashboard' || tab === 'structures' ? 'selected' : ''} aria-current={tab === 'dashboard' || tab === 'structures' ? 'page' : undefined} onClick={() => navigate(infoView.current)}><Info size={22} /><span>Información</span></button>
-          <button className={tab === 'profile' || tab === 'trips' || tab === 'admin' ? 'selected' : ''} aria-current={tab === 'profile' ? 'page' : undefined} onClick={() => navigate('profile')}><UserRound size={22} /><span>Perfil</span></button>
+          <button className={tab === 'profile' || tab === 'trips' || tab === 'admin' || tab === 'operator' ? 'selected' : ''} aria-current={tab === 'profile' ? 'page' : undefined} onClick={() => navigate('profile')}><UserRound size={22} /><span>Perfil</span></button>
         </nav>
       </main>
     </div>
