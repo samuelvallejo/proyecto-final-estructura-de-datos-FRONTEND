@@ -5,6 +5,9 @@
  * get, set, delete and eviction are O(1): the map finds the node and the list
  * moves or unlinks it without searching. Entries older than ttlMs are treated
  * as missing so cached server answers cannot become stale for long.
+ *
+ * Design pattern: Iterator. ``for (const [key, value] of cache)`` walks the
+ * entries from most to least recently used without exposing the nodes.
  */
 class CacheNode<K, V> {
   key: K;
@@ -15,7 +18,7 @@ class CacheNode<K, V> {
   constructor(key: K, value: V, storedAt: number) { this.key = key; this.value = value; this.storedAt = storedAt; }
 }
 
-export class LruCache<K, V> {
+export class LruCache<K, V> implements Iterable<[K, V]> {
   readonly capacity: number;
   readonly ttlMs: number;
   private readonly nodes = new Map<K, CacheNode<K, V>>();
@@ -86,12 +89,12 @@ export class LruCache<K, V> {
     this.head = this.tail = null;
   }
 
-  /** Keys from most to least recently used (expired ones included until touched). */
-  keys(): K[] {
-    const result: K[] = [];
-    for (let node = this.head; node; node = node.next) result.push(node.key);
-    return result;
+  *[Symbol.iterator](): Iterator<[K, V]> {
+    for (let node = this.head; node; node = node.next) yield [node.key, node.value];
   }
+
+  /** Keys from most to least recently used (expired ones included until touched). */
+  keys(): K[] { return [...this].map(([key]) => key); }
 
   /** Links in both directions agree with the map; used by the tests. */
   validate(): boolean {
