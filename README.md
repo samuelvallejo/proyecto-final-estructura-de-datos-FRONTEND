@@ -111,4 +111,14 @@ Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** 
 - **Plan de jornada**: los baches más urgentes ordenados con vecino más cercano + 2-opt (`GET /api/operator/plan`). El mapa dibuja el orden de visita y la pantalla compara la distancia con el orden de prioridad. Son distancias en línea recta, no rutas por calles.
 - **Duplicados**: grupos de reportes tan cercanos que probablemente son el mismo hueco (`GET /api/operator/duplicates`), con las comparaciones que evita la rejilla espacial frente a la fuerza bruta. La persona desmarca los que sean huecos distintos y fusiona el resto (`POST /api/operator/duplicates/merge`).
 
+### Estructuras de datos del frontend (TypeScript)
+
+| Archivo | Estructura | Uso real |
+|---|---|---|
+| `src/data-structures/RouteList.ts` | Lista doblemente enlazada + tabla hash por id | Paradas pendientes del plan: «Visitado» y «Dejar para el final» en O(1), con la distancia restante actualizada en O(1) |
+| `src/data-structures/LruCache.ts` | Caché LRU: tabla hash + lista doblemente enlazada | Reutiliza durante un minuto las últimas 30 respuestas de la búsqueda al escribir y borrar letras |
+| `src/data-structures/Stack.ts` | Pila | Historial del botón «Volver» (ya existía) |
+
+Pruebas: `tests/routeList.test.ts` y `tests/lruCache.test.ts`, con secuencias aleatorias comparadas contra un modelo de referencia.
+
 Archivos: `src/components/operator/`, `src/services/operator.ts`, `src/types/operator.ts`, `src/operator.css` y `tests/operator.test.ts`. El Conductor no ve la sección y el backend le responde 403.
