@@ -4,6 +4,7 @@ import type { DayPlan, DuplicateReview, MergeResult, PlanStop, PriorityBreakdown
 import type { RouteItem } from '../data-structures/RouteList.ts';
 
 export type RouteAlgorithm = 'two-opt' | 'nearest-neighbour' | 'priority';
+export type NeighbourMethod = 'grid' | 'brute-force';
 import type { GraphEdge } from '../types/graphs';
 
 /** HTTP client of the maintenance workspace (/api/operator). */
@@ -26,8 +27,8 @@ export class OperatorApi {
     return ApiClient.request<{ events: StatusEvent[] }>(`/operator/reports/${encodeURIComponent(reportId)}/timeline`);
   }
 
-  static loadDuplicates(radius: number, signal?: AbortSignal): Promise<DuplicateReview> {
-    return ApiClient.request<DuplicateReview>(`/operator/duplicates?radius=${radius}`, { signal });
+  static loadDuplicates(radius: number, signal?: AbortSignal, method: NeighbourMethod = 'grid'): Promise<DuplicateReview> {
+    return ApiClient.request<DuplicateReview>(`/operator/duplicates?radius=${radius}&method=${method}`, { signal });
   }
 
   static mergeDuplicates(canonicalReportId: string, duplicateReportIds: string[]): Promise<MergeResult> {
@@ -48,6 +49,8 @@ export class OperatorView {
   static readonly algorithmText: Record<RouteAlgorithm, string> = {
     'two-opt': 'Vecino más cercano + 2-opt', 'nearest-neighbour': 'Solo vecino más cercano', priority: 'Orden de prioridad',
   };
+
+  static readonly neighbourMethodText: Record<NeighbourMethod, string> = { grid: 'Rejilla espacial', 'brute-force': 'Fuerza bruta (todos los pares)' };
 
   static readonly componentText: Record<PriorityComponent, string> = {
     hazard: 'Riesgo', exposure: 'Personas expuestas', traffic: 'Pasos registrados', waiting: 'Tiempo de espera', status: 'Estado validado',

@@ -18,6 +18,6 @@ export interface DuplicateCluster { canonical: Report; duplicates: Report[]; siz
 export interface DuplicateReview {
   clusters: DuplicateCluster[]; generatedAt: number;
   stats: { potholes: number; indexed: number; skipped: number; closePairs: number; candidateChecks: number; bruteForceChecks: number;
-    clusters: number; duplicates: number; estimatedPhysicalPotholes: number; radiusMeters: number };
+    clusters: number; duplicates: number; estimatedPhysicalPotholes: number; radiusMeters: number; method?: string };
 }
 export interface MergeResult { report: Report; merged: number; passesMoved: number }

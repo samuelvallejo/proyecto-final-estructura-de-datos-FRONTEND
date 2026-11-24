@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Combine, Grid3x3 } from 'lucide-react';
 import type { Report } from '../../types';
 import type { DuplicateCluster, DuplicateReview as DuplicateReviewData } from '../../types/operator';
-import { OperatorView, OperatorApi } from '../../services/operator';
+import type { NeighbourMethod } from '../../services/operator';
+import { OperatorApi, OperatorView } from '../../services/operator';
 import { Formatter } from '../../services/format';
 import ReportCard from '../ReportCard';
 import LoadingIndicator from '../LoadingIndicator';
@@ -12,6 +13,7 @@ interface Props { onMap: (report: Report) => void; readOnlyReason?: string }
 /** Groups of reports that probably describe the same pothole, for human review and merge. */
 export default function DuplicateReview({ onMap, readOnlyReason }: Props) {
   const [radius, setRadius] = useState(15);
+  const [method, setMethod] = useState<NeighbourMethod>('grid');
   const [loaded, setLoaded] = useState<{ key: string; data: DuplicateReviewData } | null>(null);
   const [excluded, setExcluded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState('');
@@ -19,16 +21,16 @@ export default function DuplicateReview({ onMap, readOnlyReason }: Props) {
   const [busy, setBusy] = useState('');
   const [revision, setRevision] = useState(0);
 
-  const key = `${radius}:${revision}`;
+  const key = `${radius}:${method}:${revision}`;
   // Results of another radius are hidden while the new ones load.
   const review = loaded?.key === key ? loaded.data : null;
   useEffect(() => {
     const controller = new AbortController();
-    OperatorApi.loadDuplicates(radius, controller.signal)
-      .then(data => { setLoaded({ key: `${radius}:${revision}`, data }); setError(''); setExcluded({}); })
+    OperatorApi.loadDuplicates(radius, controller.signal, method)
+      .then(data => { setLoaded({ key: `${radius}:${method}:${revision}`, data }); setError(''); setExcluded({}); })
       .catch((cause: Error) => { if (cause.name !== 'AbortError') setError(cause.message); });
     return () => controller.abort();
-  }, [radius, revision]);
+  }, [radius, method, revision]);
 
   async function merge(cluster: DuplicateCluster) {
     const ids = cluster.duplicates.map(report => report.id).filter(id => !excluded[id]);
@@ -49,7 +51,9 @@ export default function DuplicateReview({ onMap, readOnlyReason }: Props) {
       <label className="compact-select">Radio<select value={radius} onChange={event => setRadius(Number(event.target.value))}>
         {[5, 10, 15, 25, 50].map(value => <option key={value} value={value}>{value} m</option>)}</select></label>
     </header>
-    {stats && <p className="structure-note" role="status"><Grid3x3 size={14} /> Rejilla espacial + unión-búsqueda: {stats.candidateChecks} comparaciones en lugar de {stats.bruteForceChecks} ({OperatorView.checksAvoidedPercent(stats).toLocaleString('es-CO')} % evitadas). {stats.potholes} baches abiertos ≈ {stats.estimatedPhysicalPotholes} huecos físicos.</p>}
+    <label className="compact-select">Estrategia de búsqueda de vecinos<select value={method} onChange={event => setMethod(event.target.value as NeighbourMethod)}>
+      {(Object.keys(OperatorView.neighbourMethodText) as NeighbourMethod[]).map(value => <option key={value} value={value}>{OperatorView.neighbourMethodText[value]}</option>)}</select></label>
+    {stats && <p className="structure-note" role="status"><Grid3x3 size={14} /> {OperatorView.neighbourMethodText[method]} + unión-búsqueda: {stats.candidateChecks} comparaciones medidas de {stats.bruteForceChecks} posibles ({OperatorView.checksAvoidedPercent(stats).toLocaleString('es-CO')} % evitadas). {stats.potholes} baches abiertos ≈ {stats.estimatedPhysicalPotholes} huecos físicos.</p>}
     {readOnlyReason && <p className="message info" role="note">{readOnlyReason}</p>}
     {error && <p className="message error" role="alert">{error}</p>}
     {notice && <p className="message success" role="status">{notice}</p>}
