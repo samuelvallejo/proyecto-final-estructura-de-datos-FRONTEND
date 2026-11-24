@@ -33,7 +33,7 @@
 .scan-feedback{display:flex;flex-direction:column;gap:5px;padding:12px 14px;margin-top:12px;border:1px solid #dce8d6;border-radius:12px;background:#eef5e8;color:#35583e}.scan-feedback strong{font-size:12px}.scan-feedback span,.scan-feedback p{font-size:10px;line-height:1.5}.gps-retry{width:100%;margin-top:8px}.report-map-link{margin:0 0 15px auto;min-height:32px}.detection-box span{letter-spacing:0;white-space:normal;max-width:170px}.map-frame+.report-card{margin-top:12px}
 @media(min-width:431px){.phone-app{margin:24px 0;border-radius:25px;min-height:calc(100svh - 48px);height:calc(100svh - 48px);overflow-y:auto}.page{min-height:calc(100% - 140px)}}
 
-/* Explorador de reportes: controles accesibles y resultados adaptables. */
+/* Report explorer: accessible controls and responsive results. */
 .explorer-controls{margin-top:16px;padding:15px;background:#edf3e7;border:1px solid #d5e1cf;border-radius:14px}
 .search-control,.explorer-selects label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#35513c}
 .search-control span{display:flex;gap:6px;align-items:center}
@@ -48,7 +48,7 @@
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #49792a;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
-/* Resumen comunitario y espacio de trabajo adaptable. */
+/* Community summary and responsive workspace. */
 .risk-overview{margin:20px 0}.risk-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.risk-stat{display:flex;flex-direction:column;gap:6px;padding:12px 8px;border:1px solid #dce4d7;border-radius:12px;background:white}.risk-stat span{font-size:11px;font-weight:700}.risk-stat strong{font-size:24px;color:#193d29}.risk-stat small{font-size:10px;line-height:1.5;color:#566458}.risk-stat.risk-critical{border-top:4px solid #d44f3a}.risk-stat.risk-high{border-top:4px solid #c77713}.risk-stat.risk-medium{border-top:4px solid #a88615}.risk-stat.risk-low{border-top:4px solid #518737}
 .skip-link{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.skip-link:focus{position:fixed;top:8px;left:8px;width:auto;height:auto;overflow:visible;clip-path:none;z-index:10000;background:#fff;color:#173e2b;padding:12px;border-radius:8px}
 @media(max-width:360px){.risk-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.explorer-selects{grid-template-columns:1fr}}

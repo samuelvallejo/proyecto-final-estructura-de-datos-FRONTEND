@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Position, Report } from '../types';
 import { ApiError } from '../services/api';
-import { publishCommunityReport, usableGPS } from '../services/community';
+import { CommunityApi, GpsTools } from '../services/community';
 import LoadingIndicator from './LoadingIndicator';
 import PotholeSymbol from './PotholeSymbol';
 import '../community.css';
@@ -19,13 +19,13 @@ export default function CommunityReportForm({ location, requestingLocation, onLo
   async function publish(event: React.FormEvent) {
     event.preventDefault();
     if (operation.current) return;
-    if (!usableGPS(location)) { setFailed(true); setMessage('Actualiza tu ubicación antes de publicar. Se necesita GPS de hasta ±100 m y menos de 30 segundos de antigüedad.'); return; }
+    if (!GpsTools.usableGPS(location)) { setFailed(true); setMessage('Actualiza tu ubicación antes de publicar. Se necesita GPS de hasta ±100 m y menos de 30 segundos de antigüedad.'); return; }
     const text = description.trim();
     if (text.length < 10 || text.length > 280) { setFailed(true); setMessage('Describe el hueco con entre 10 y 280 caracteres.'); return; }
     const controller = new AbortController(); operation.current = controller;
     setBusy(true); setMessage('');
     try {
-      const result = await publishCommunityReport(location, risk, text, controller.signal);
+      const result = await CommunityApi.publishCommunityReport(location, risk, text, controller.signal);
       if (controller.signal.aborted) return;
       setFailed(false); setMessage(result.existing ? 'Este lugar ya tenía un aviso. Puedes verlo en el mapa.' : 'Aviso publicado. Otras personas podrán verlo en el mapa.');
       setDescription(''); onPublished(result.report);

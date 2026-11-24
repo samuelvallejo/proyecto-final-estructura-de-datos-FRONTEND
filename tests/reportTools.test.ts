@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { damageLabels, filterReports, normalize, reportsCsv, riskLabels } from '../src/services/reportTools.ts';
+import { ReportTools } from '../src/services/reportTools.ts';
 import type { Report } from '../src/types.ts';
 
 function report(overrides: Partial<Report> = {}): Report {
@@ -20,45 +20,45 @@ function report(overrides: Partial<Report> = {}): Report {
   };
 }
 
-test('etiquetas de riesgo y tipo de daño en español', () => {
-  assert.equal(riskLabels.LOW, 'Bajo');
-  assert.equal(riskLabels.MEDIUM, 'Moderado');
-  assert.equal(riskLabels.HIGH, 'Alto');
-  assert.equal(riskLabels.CRITICAL, 'Crítico');
-  assert.equal(damageLabels.BACHE, 'Bache');
-  assert.equal(damageLabels.HUNDIMIENTO, 'Hundimiento');
+test('risk and damage-type labels in Spanish', () => {
+  assert.equal(ReportTools.riskLabels.LOW, 'Bajo');
+  assert.equal(ReportTools.riskLabels.MEDIUM, 'Moderado');
+  assert.equal(ReportTools.riskLabels.HIGH, 'Alto');
+  assert.equal(ReportTools.riskLabels.CRITICAL, 'Crítico');
+  assert.equal(ReportTools.damageLabels.BACHE, 'Bache');
+  assert.equal(ReportTools.damageLabels.HUNDIMIENTO, 'Hundimiento');
 });
 
-test('normalizar quita acentos, mayúsculas y espacios', () => {
-  assert.equal(normalize('  Bache '), 'bache');
-  assert.equal(normalize('HUNDIMIENTO'), 'hundimiento');
-  assert.equal(normalize('Daño Vial'), 'dano vial');
-  assert.equal(normalize('  Grieta   de Asfalto '), 'grieta de asfalto');
+test('normalize removes accents, capitals and extra spaces', () => {
+  assert.equal(ReportTools.normalize('  Bache '), 'bache');
+  assert.equal(ReportTools.normalize('HUNDIMIENTO'), 'hundimiento');
+  assert.equal(ReportTools.normalize('Daño Vial'), 'dano vial');
+  assert.equal(ReportTools.normalize('  Grieta   de Asfalto '), 'grieta de asfalto');
 });
 
-test('filtrar por nivel de riesgo', () => {
+test('filters by risk level', () => {
   const items = [report({ id: 'a', hazardLevel: 'HIGH', hazardScore: 80 }),
     report({ id: 'b', hazardLevel: 'LOW', hazardScore: 20 })];
-  assert.deepEqual(filterReports(items, { query: '', risk: 'HIGH', damage: '', favoritesOnly: false }, []).map(item => item.id), ['a']);
-  assert.deepEqual(filterReports(items, { query: '', risk: 'LOW', damage: '', favoritesOnly: false }, []).map(item => item.id), ['b']);
+  assert.deepEqual(ReportTools.filterReports(items, { query: '', risk: 'HIGH', damage: '', favoritesOnly: false }, []).map(item => item.id), ['a']);
+  assert.deepEqual(ReportTools.filterReports(items, { query: '', risk: 'LOW', damage: '', favoritesOnly: false }, []).map(item => item.id), ['b']);
 });
 
-test('filtrar por tipo de daño y favoritos', () => {
+test('filters by damage type and favorites', () => {
   const items = [report({ id: 'a', potholeType: 'BACHE' }), report({ id: 'b', potholeType: 'GRIETA' })];
-  assert.deepEqual(filterReports(items, { query: '', risk: '', damage: 'GRIETA', favoritesOnly: false }, []).map(item => item.id), ['b']);
-  assert.deepEqual(filterReports(items, { query: '', risk: '', damage: '', favoritesOnly: true }, ['a']).map(item => item.id), ['a']);
+  assert.deepEqual(ReportTools.filterReports(items, { query: '', risk: '', damage: 'GRIETA', favoritesOnly: false }, []).map(item => item.id), ['b']);
+  assert.deepEqual(ReportTools.filterReports(items, { query: '', risk: '', damage: '', favoritesOnly: true }, ['a']).map(item => item.id), ['a']);
 });
 
-test('filtrar por texto normalizado sin modificar el arreglo original', () => {
+test('filters by normalized text without modifying the original array', () => {
   const items = [report({ id: 'a', aiDescription: 'Hundimiento en la calzada central' }),
     report({ id: 'b', potholeType: 'GRIETA', aiDescription: 'Grieta en la acera norte' })];
-  assert.deepEqual(filterReports(items, { query: 'bache', risk: '', damage: '', favoritesOnly: false }, []).map(item => item.id), ['a']);
+  assert.deepEqual(ReportTools.filterReports(items, { query: 'bache', risk: '', damage: '', favoritesOnly: false }, []).map(item => item.id), ['a']);
   const original = [report({ id: 'a' }), report({ id: 'b' })];
-  assert.deepEqual(filterReports(original, { query: '', risk: '', damage: '', favoritesOnly: false }, []), original);
+  assert.deepEqual(ReportTools.filterReports(original, { query: '', risk: '', damage: '', favoritesOnly: false }, []), original);
 });
 
-test('exportar reportes a CSV con BOM, separador y escape de formulas', () => {
-  const csv = reportsCsv([report({ id: 'a', hazardScore: 80, hazardLevel: 'HIGH', potholeType: 'BACHE', zone: { street: 'Calle 1', neighborhood: 'Centro', city: 'Cali', fullAddress: 'Calle 1, Centro, Cali' }, aiDescription: 'Hundimiento en la calzada' })]);
+test('exports reports to CSV with BOM, separator and formula escaping', () => {
+  const csv = ReportTools.reportsCsv([report({ id: 'a', hazardScore: 80, hazardLevel: 'HIGH', potholeType: 'BACHE', zone: { street: 'Calle 1', neighborhood: 'Centro', city: 'Cali', fullAddress: 'Calle 1, Centro, Cali' }, aiDescription: 'Hundimiento en la calzada' })]);
   assert.ok(csv.startsWith('\uFEFF'));
   const rows = csv.split('\r\n');
   assert.equal(rows.length, 2);
@@ -66,6 +66,6 @@ test('exportar reportes a CSV con BOM, separador y escape de formulas', () => {
   assert.equal(header, 'Fecha ISO;Tipo;Riesgo;Puntuación;Dirección;Latitud;Longitud;Precisión (m);Descripción;Estado');
   const dataRow = rows[1].replace(/^\uFEFF/, '').split(';').map(cell => cell.replace(/^"|"$/g, '')).join(';');
   assert.equal(dataRow.split(';')[2], 'Alto');
-  const dangerous = reportsCsv([report({ id: 'x', aiDescription: '=SUMA(1+1)' })]);
+  const dangerous = ReportTools.reportsCsv([report({ id: 'x', aiDescription: '=SUMA(1+1)' })]);
   assert.ok(dangerous.includes("'=SUMA(1+1)"));
 });

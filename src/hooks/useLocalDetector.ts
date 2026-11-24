@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { LocalBox } from '../services/yolo';
+import { HashMap } from '../data-structures/HashMap';
+import { Queue } from '../data-structures/Queue';
 
 /**
- * Modelo YOLO exportado a ONNX que se ejecuta en el teléfono (mismo entrenamiento que el servidor).
- * pothole-live.json indica el tamaño de entrada, el preprocesado y el umbral con que se exportó.
+ * YOLO model exported to ONNX that runs on the phone (same training as the server).
+ * pothole-live.json gives the input size, the preprocessing and the threshold it was exported with.
  */
 export const LOCAL_MODEL_CONFIG = '/models/pothole-live.json';
 interface ModelConfig { model: string; size: number; resize: 'letterbox' | 'stretch'; threshold: number }
@@ -12,10 +14,10 @@ interface ModelConfig { model: string; size: number; resize: 'letterbox' | 'stre
 type Status = 'idle' | 'loading' | 'ready' | 'failed';
 interface Pending { resolve: (value: { boxes: LocalBox[]; inferenceMs: number }) => void; reject: (cause: Error) => void }
 
-/** Carga el detector en un Web Worker solo cuando se necesita y lo mantiene listo mientras la app está abierta. */
+/** Loads the detector in a Web Worker only when needed and keeps it ready while the app is open. */
 export function useLocalDetector(enabled: boolean) {
   const worker = useRef<Worker | null>(null);
-  const pending = useRef(new Map<number, Pending>());
+  const pending = useRef(new HashMap<number, Pending>());
   const sequence = useRef(0);
   const [status, setStatus] = useState<Status>('idle');
   const [backend, setBackend] = useState('');
@@ -71,7 +73,7 @@ export function useLocalDetector(enabled: boolean) {
   return { status, backend, error, detect, threshold };
 }
 
-/** Recorte visible del video (object-fit: cover), para que las cajas coincidan con lo que ve el usuario. */
+/** Visible crop of the video (object-fit: cover), so the boxes match what the user sees. */
 export function visibleRegion(video: HTMLVideoElement) {
   const stage = video.getBoundingClientRect();
   const scale = Math.max(stage.width / video.videoWidth, stage.height / video.videoHeight);
@@ -89,7 +91,7 @@ interface LoopOptions {
   onError: (cause: Error) => void;
 }
 
-/** Bucle continuo: en cuanto termina un fotograma se analiza el siguiente; nunca hay dos en curso. */
+/** Continuous loop: as soon as a frame finishes the next one is analyzed; never two at once. */
 export function useLocalScanLoop({ videoRef, active, detect, threshold, onResult, onError }: LoopOptions) {
   const callbacks = useRef({ onResult, onError });
   useEffect(() => { callbacks.current = { onResult, onError }; }, [onResult, onError]);
@@ -97,7 +99,7 @@ export function useLocalScanLoop({ videoRef, active, detect, threshold, onResult
     if (!active) return;
     let cancelled = false;
     let failures = 0;
-    const times: number[] = [];
+    const times = new Queue<number>();
     type FrameVideo = HTMLVideoElement & { requestVideoFrameCallback?: (callback: () => void) => number };
     const nextFrame = (run: () => void) => {
       const video = videoRef.current as FrameVideo | null;
@@ -115,9 +117,9 @@ export function useLocalScanLoop({ videoRef, active, detect, threshold, onResult
         const result = await detect(bitmap, threshold);
         if (cancelled) return;
         const now = performance.now();
-        times.push(now);
-        while (times.length > 1 && now - times[0] > 2000) times.shift();
-        const fps = times.length > 1 ? (times.length - 1) / ((now - times[0]) / 1000) : 0;
+        times.enqueue(now);
+        while (times.size > 1 && now - times.peek()! > 2000) times.dequeue();
+        const fps = times.size > 1 ? (times.size - 1) / ((now - times.peek()!) / 1000) : 0;
         failures = 0;
         callbacks.current.onResult(result.boxes, { inferenceMs: result.inferenceMs, fps });
       } catch (cause) {

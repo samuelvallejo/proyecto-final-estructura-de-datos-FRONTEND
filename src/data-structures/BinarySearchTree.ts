@@ -1,5 +1,12 @@
-/** Adaptación de Node/BinaryTree del material Arboles.pdf (Mideros, 2026). */
-export type Comparator<K> = (left: K, right: K) => number;
+/** Binary search tree adapted from the Node/BinaryTree examples of the course notes (Arboles.pdf, Mideros, 2026).
+ * Every traversal is iterative and uses the hand-written Stack and Queue instead of arrays. */
+import { LinkedList } from './LinkedList.ts';
+import { Queue } from './Queue.ts';
+import { Sorter } from './Sorter.ts';
+import { Stack } from './Stack.ts';
+import type { Comparator } from './Sorter.ts';
+
+export type { Comparator };
 export type Traversal = 'inorder' | 'descending' | 'preorder' | 'postorder' | 'level';
 export class TreeNode<K, V> {
   key: K;
@@ -43,9 +50,9 @@ export class BinarySearchTree<K, V> {
   contains(key: K): boolean { return this.findNode(key) !== null; }
 
   *inOrder(): Generator<TreeNode<K, V>> {
-    const pending: TreeNode<K, V>[] = [];
+    const pending = new Stack<TreeNode<K, V>>();
     let current = this.root;
-    while (current || pending.length) {
+    while (current || !pending.isEmpty()) {
       while (current) { pending.push(current); current = current.left; }
       current = pending.pop()!;
       yield current;
@@ -54,9 +61,9 @@ export class BinarySearchTree<K, V> {
   }
 
   *reverseOrder(): Generator<TreeNode<K, V>> {
-    const pending: TreeNode<K, V>[] = [];
+    const pending = new Stack<TreeNode<K, V>>();
     let current = this.root;
-    while (current || pending.length) {
+    while (current || !pending.isEmpty()) {
       while (current) { pending.push(current); current = current.right; }
       current = pending.pop()!;
       yield current;
@@ -65,8 +72,9 @@ export class BinarySearchTree<K, V> {
   }
 
   *preOrder(): Generator<TreeNode<K, V>> {
-    const pending = this.root ? [this.root] : [];
-    while (pending.length) {
+    const pending = new Stack<TreeNode<K, V>>();
+    if (this.root) pending.push(this.root);
+    while (!pending.isEmpty()) {
       const node = pending.pop()!;
       yield node;
       if (node.right) pending.push(node.right);
@@ -75,8 +83,9 @@ export class BinarySearchTree<K, V> {
   }
 
   *postOrder(): Generator<TreeNode<K, V>> {
-    const pending: [TreeNode<K, V>, boolean][] = this.root ? [[this.root, false]] : [];
-    while (pending.length) {
+    const pending = new Stack<[TreeNode<K, V>, boolean]>();
+    if (this.root) pending.push([this.root, false]);
+    while (!pending.isEmpty()) {
       const [node, visited] = pending.pop()!;
       if (visited) { yield node; continue; }
       pending.push([node, true]);
@@ -86,12 +95,13 @@ export class BinarySearchTree<K, V> {
   }
 
   *levelOrder(): Generator<{ node: TreeNode<K, V>; level: number; parent: TreeNode<K, V> | null }> {
-    const pending = this.root ? [{ node: this.root, level: 1, parent: null as TreeNode<K, V> | null }] : [];
-    for (let cursor = 0; cursor < pending.length; cursor++) {
-      const item = pending[cursor];
+    const pending = new Queue<{ node: TreeNode<K, V>; level: number; parent: TreeNode<K, V> | null }>();
+    if (this.root) pending.enqueue({ node: this.root, level: 1, parent: null });
+    while (!pending.isEmpty()) {
+      const item = pending.dequeue()!;
       yield item;
-      if (item.node.left) pending.push({ node: item.node.left, level: item.level + 1, parent: item.node });
-      if (item.node.right) pending.push({ node: item.node.right, level: item.level + 1, parent: item.node });
+      if (item.node.left) pending.enqueue({ node: item.node.left, level: item.level + 1, parent: item.node });
+      if (item.node.right) pending.enqueue({ node: item.node.right, level: item.level + 1, parent: item.node });
     }
   }
 
@@ -101,9 +111,13 @@ export class BinarySearchTree<K, V> {
       case 'descending': return this.reverseOrder();
       case 'preorder': return this.preOrder();
       case 'postorder': return this.postOrder();
-      case 'level': return [...this.levelOrder()].map(item => item.node);
-      default: throw new Error('Recorrido inválido');
+      case 'level': return this.levelNodes();
+      default: throw new Error('Invalid traversal');
     }
+  }
+
+  private *levelNodes(): Generator<TreeNode<K, V>> {
+    for (const { node } of this.levelOrder()) yield node;
   }
 
   get height(): number {
@@ -123,11 +137,12 @@ export class BinarySearchTree<K, V> {
       branches, internalNodes: this.size - leaves, order: 2, maxDegree };
   }
 
-  trace(key: K): TreeNode<K, V>[] {
-    const result: TreeNode<K, V>[] = [];
+  /** Nodes visited while searching ``key``, from the root down. */
+  trace(key: K): LinkedList<TreeNode<K, V>> {
+    const result = new LinkedList<TreeNode<K, V>>();
     let current = this.root;
     while (current) {
-      result.push(current);
+      result.append(current);
       const comparison = this.compare(key, current.key);
       if (comparison === 0) break;
       current = comparison < 0 ? current.left : current.right;
@@ -136,14 +151,14 @@ export class BinarySearchTree<K, V> {
   }
 
   *between(lower: K, upper: K): Generator<TreeNode<K, V>> {
-    if (this.compare(lower, upper) > 0) throw new Error('Rango inválido');
-    const pending: TreeNode<K, V>[] = []; let current = this.root;
-    while (current || pending.length) {
+    if (this.compare(lower, upper) > 0) throw new Error('Invalid range');
+    const pending = new Stack<TreeNode<K, V>>(); let current = this.root;
+    while (current || !pending.isEmpty()) {
       while (current) {
         if (this.compare(current.key, lower) < 0) current = current.right;
         else { pending.push(current); current = current.left; }
       }
-      if (!pending.length) break;
+      if (pending.isEmpty()) break;
       current = pending.pop()!;
       if (this.compare(current.key, upper) > 0) break;
       yield current; current = current.right;
@@ -169,42 +184,50 @@ export class BinarySearchTree<K, V> {
     this.size--; return true;
   }
 
+  /** Builds a balanced tree from unsorted pairs; a repeated key keeps its last value. */
   static fromItems<K, V>(items: Iterable<[K, V]>, compare: Comparator<K>): BinarySearchTree<K, V> {
-    const pairs = [...items].sort((a, b) => compare(a[0], b[0]));
-    const unique: [K, V][] = [];
-    for (const pair of pairs) {
-      if (unique.length && compare(unique[unique.length - 1][0], pair[0]) === 0) unique[unique.length - 1] = pair;
-      else unique.push(pair);
+    const unique = new LinkedList<[K, V]>();
+    for (const pair of Sorter.mergeSort(items, (a, b) => compare(a[0], b[0]))) {
+      if (!unique.isEmpty() && compare(unique.last()![0], pair[0]) === 0) unique.replaceLast(pair);
+      else unique.append(pair);
     }
     const tree = new BinarySearchTree<K, V>(compare);
-    const tasks: [number, number, TreeNode<K, V> | null, 'root' | 'left' | 'right'][] = [[0, unique.length, null, 'root']];
-    while (tasks.length) {
-      const [first, last, parent, side] = tasks.pop()!;
-      if (first >= last) continue;
-      const middle = Math.floor((first + last) / 2); const node = new TreeNode(...unique[middle]);
-      if (parent && side !== 'root') parent[side] = node; else tree.root = node;
-      tree.size++; tasks.push([middle + 1, last, node, 'right'], [first, middle, node, 'left']);
-    }
+    const sorted = unique[Symbol.iterator]();
+    // In-order construction: the left subtree takes the first half, then the middle pair becomes the root.
+    const build = (count: number): TreeNode<K, V> | null => {
+      if (count <= 0) return null;
+      const leftCount = Math.floor(count / 2);
+      const left = build(leftCount);
+      const node = new TreeNode(...(sorted.next().value as [K, V]));
+      node.left = left;
+      node.right = build(count - leftCount - 1);
+      return node;
+    };
+    tree.root = build(unique.size);
+    tree.size = unique.size;
     return tree;
   }
 
   rebalance(): void {
-    const rebuilt = BinarySearchTree.fromItems([...this.inOrder()].map(node => [node.key, node.value]), this.compare);
+    const pairs = new LinkedList<[K, V]>();
+    for (const node of this.inOrder()) pairs.append([node.key, node.value]);
+    const rebuilt = BinarySearchTree.fromItems(pairs, this.compare);
     this.root = rebuilt.root; this.size = rebuilt.size;
   }
 
+  /** Checks ordering bounds; visiting more nodes than ``size`` means a cycle or a shared node. */
   validate(): boolean {
-    const seen = new Set<TreeNode<K, V>>();
-    const pending: { node: TreeNode<K, V>; lower?: K; upper?: K }[] = this.root ? [{ node: this.root }] : [];
-    while (pending.length) {
+    let visited = 0;
+    const pending = new Stack<{ node: TreeNode<K, V>; lower?: K; upper?: K }>();
+    if (this.root) pending.push({ node: this.root });
+    while (!pending.isEmpty()) {
       const { node, lower, upper } = pending.pop()!;
-      if (seen.has(node) || lower !== undefined && this.compare(node.key, lower) <= 0
+      if (++visited > this.size || lower !== undefined && this.compare(node.key, lower) <= 0
         || upper !== undefined && this.compare(node.key, upper) >= 0) return false;
-      seen.add(node);
       if (node.right) pending.push({ node: node.right, lower: node.key, upper });
       if (node.left) pending.push({ node: node.left, lower, upper: node.key });
     }
-    return seen.size === this.size;
+    return visited === this.size;
   }
 
   clear(): void { this.root = null; this.size = 0; }

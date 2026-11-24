@@ -2,9 +2,11 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import type { Report } from '../../types';
 import type { GraphOrder, GraphSnapshot } from '../../types/graphs';
 import useReportGraph from '../../hooks/useReportGraph';
-import { adjacency } from '../../services/graphView';
+import { GraphView } from '../../services/graphView';
 import LoadingIndicator from '../LoadingIndicator';
 import GraphDiagram from './GraphDiagram';
+import { HashMap } from '../../data-structures/HashMap';
+import { Sorter } from '../../data-structures/Sorter';
 const ReportMap = lazy(() => import('../ReportMap'));
 
 export default function GraphWorkspace({ onMap }: { onMap: (report: Report) => void }) {
@@ -32,8 +34,8 @@ function GraphResults({ snapshot, requestedEnd, onMap, onQuery }: { snapshot: Gr
   const [selected, setSelected] = useState(start);
   const [step, setStep] = useState(0);
   const [view, setView] = useState<'diagram' | 'map'>('diagram');
-  const neighbors = useMemo(() => adjacency(snapshot), [snapshot]);
-  const byId = useMemo(() => new Map(reports.map((report, i) => [report.id, { report, label: `Bache ${i + 1}` }])), [reports]);
+  const neighbors = useMemo(() => GraphView.adjacency(snapshot), [snapshot]);
+  const byId = useMemo(() => HashMap.from(reports.map((report, i) => [report.id, { report, label: `Bache ${i + 1}` }] as const)), [reports]);
   const current = byId.get(selected);
   const label = (id: string) => byId.get(id)?.label || 'Bache';
   function visit(index: number) { setStep(index); setSelected(graph.traversal.reportIds[index]); }
@@ -55,7 +57,7 @@ function GraphResults({ snapshot, requestedEnd, onMap, onQuery }: { snapshot: Gr
       <div className="graph-steps"><button className="button-secondary" disabled={step === 0} onClick={() => visit(step - 1)}>Paso anterior del grafo</button><span aria-live="polite">Paso {step + 1} de {graph.traversal.reportIds.length}</span><button className="button-secondary" disabled={step + 1 >= graph.traversal.reportIds.length} onClick={() => visit(step + 1)}>Paso siguiente del grafo</button></div>
       <p>Recorrido aplicado: {graph.traversal.order.toUpperCase()} desde {label(graph.traversal.startId!)}. Visita {graph.traversal.reportIds.length} vértices del grupo de origen.</p>
       <label className="graph-inspect">Inspeccionar bache<select aria-label="Inspeccionar bache" value={selected} onChange={event => setSelected(event.target.value)}>{reports.map(r => <option key={r.id} value={r.id}>{label(r.id)}</option>)}</select></label>
-      {current && <article className="graph-detail"><h3>{current.label} · Riesgo {current.report.hazardScore}/100</h3><p>{[current.report.zone.street, current.report.zone.neighborhood, current.report.zone.city].filter(Boolean).join(', ') || 'Ubicación registrada por GPS'}</p><p>{current.report.location.lat.toFixed(6)}, {current.report.location.lng.toFixed(6)} · Grupo {graph.nodes.find(n => n.id === selected)?.component}</p><button className="button-secondary" onClick={() => onMap(current.report)}>Ver este bache en el mapa</button><h4>Lista de adyacencia: conexiones directas</h4>{neighbors.get(selected)?.size ? <ul>{[...neighbors.get(selected)!].map(([id, meters]) => <li key={id}><button onClick={() => setSelected(id)}>{label(id)} · {Math.round(meters)} m</button></li>)}</ul> : <p>Este bache está aislado con la distancia seleccionada.</p>}</article>}
+      {current && <article className="graph-detail"><h3>{current.label} · Riesgo {current.report.hazardScore}/100</h3><p>{[current.report.zone.street, current.report.zone.neighborhood, current.report.zone.city].filter(Boolean).join(', ') || 'Ubicación registrada por GPS'}</p><p>{current.report.location.lat.toFixed(6)}, {current.report.location.lng.toFixed(6)} · Grupo {graph.nodes.find(n => n.id === selected)?.component}</p><button className="button-secondary" onClick={() => onMap(current.report)}>Ver este bache en el mapa</button><h4>Lista de adyacencia: conexiones directas</h4>{neighbors.get(selected)?.size ? <ul>{Sorter.mergeSort(neighbors.get(selected)!, (a, b) => a[1] - b[1]).toArray().map(([id, meters]) => <li key={id}><button onClick={() => setSelected(id)}>{label(id)} · {Math.round(meters)} m</button></li>)}</ul> : <p>Este bache está aislado con la distancia seleccionada.</p>}</article>}
     </>}
     <details className="graph-glossary"><summary>¿Cómo funciona un grafo?</summary><dl><dt>Vértice</dt><dd>Un punto de la red: aquí, un reporte de bache.</dd><dt>Arista y peso</dt><dd>Una conexión y su distancia en metros. La red permite recorrer cada conexión en ambos sentidos.</dd><dt>Grado y componente</dt><dd>El grado cuenta conexiones directas. Una componente es un grupo de vértices unidos por uno o varios enlaces.</dd><dt>BFS, DFS y Dijkstra</dt><dd>BFS explora por niveles; DFS profundiza por una rama; Dijkstra busca el menor peso acumulado con pesos no negativos.</dd></dl><p>El grafo se construye al consultar los reportes guardados en PostgreSQL. Pulsa Actualizar grafo para incorporar cambios.</p></details>
   </>;

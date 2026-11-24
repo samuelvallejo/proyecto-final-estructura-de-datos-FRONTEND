@@ -3,7 +3,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 interface ErrorBoundaryProps { children: ReactNode; }
 interface ErrorBoundaryState { error: Error | null; }
 
-/** Muestra una salida segura si un render de la aplicacion falla; mantiene el respaldo de la UI. */
+/** Shows a safe fallback when an application render fails; keeps the UI fallback in place. */
 export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null };
 

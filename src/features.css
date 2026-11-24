@@ -1,6 +1,6 @@
-/* Perfil, avatar, panel de datos, administración, mapa general y modo conducción. */
+/* Profile, avatar, dashboard, administration, general map and driving mode. */
 
-/* Avatar automático */
+/* Automatic avatar */
 .avatar{display:inline-grid;place-items:center;border-radius:50%;color:#fff;font-weight:800;letter-spacing:.3px;flex:none;box-shadow:0 0 0 2px #ffffff30;font-family:Manrope,sans-serif}
 .profile-avatar{position:relative;margin-left:auto;flex:none}
 .avatar-button{border:0;background:none;padding:0;border-radius:50%;position:relative;display:grid}
@@ -14,7 +14,7 @@
 .role-chip{display:inline-flex;align-items:center;gap:4px;width:fit-content;font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:99px;padding:4px 8px;background:#eaf3dc;color:#2d6142}
 .role-chip.role-administrador{background:#173e2b;color:#d9f86a}.role-chip.role-operario{background:#fff1da;color:#8a5a14}
 
-/* Cuentas demo en el acceso */
+/* Demo accounts on the sign-in screen */
 .demo-accounts{margin-top:16px;border:1px solid #dce6d1;background:#f6faef;border-radius:14px;padding:14px;display:grid;gap:8px}
 .demo-accounts>strong{font-size:13px;color:#203a29}.demo-accounts>p{font-size:11px;color:#6e7d6f;margin:0}
 .demo-buttons{display:grid;gap:7px}
@@ -49,7 +49,7 @@
 @keyframes skeleton{to{background-position:-200% 0}}
 .chip-row{display:flex;flex-wrap:wrap;gap:6px}.status-chip{font-size:10px;font-weight:700;background:#f2f5ed;color:#4d6153;border-radius:99px;padding:5px 9px}
 
-/* Panel de datos */
+/* Dashboard */
 .load-waterfall{background:#173e2b;color:#e6f2dc;border-radius:17px;padding:14px 15px;margin:4px 0 14px;display:grid;gap:7px}
 .load-waterfall>strong{font-size:11px;letter-spacing:.4px;color:#d9f86a}
 .waterfall-row{display:grid;grid-template-columns:118px 1fr 56px;align-items:center;gap:8px;font-size:10.5px}
@@ -97,7 +97,7 @@
 .report-card-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.report-card-actions .button-secondary{min-height:32px;flex:0 0 auto;font-size:10px}
 .report-card-actions select,.admin-user-actions select{border:1px solid #d6e2cc;border-radius:8px;padding:6px 8px;font:inherit;font-size:11px;background:#fff;color:#203a29;min-height:32px}
 
-/* Administración */
+/* Administration */
 .admin-list{display:grid;gap:9px}
 .admin-user{display:flex;gap:11px;align-items:flex-start;background:#fff;border:1px solid #e3e9dc;border-radius:15px;padding:12px;flex-wrap:wrap}
 .admin-user.inactive{opacity:.6}
@@ -110,7 +110,7 @@
 .general-map-stats .stat-tile strong{font-size:18px}
 .popup-people{font-weight:800;color:#2d6142;margin:3px 0}
 
-/* Modo conducción */
+/* Driving mode */
 .home-options .home-highlight{background:#173e2b;color:#fff;border-color:#173e2b}.home-options .home-highlight strong{color:#fff}.home-options .home-highlight span{color:#c9dac7}.home-options .home-highlight svg{color:#d9f86a;background:#ffffff14}
 .home-options .home-admin{border-color:#173e2b55}
 .drive-launch,.drive-summary{background:#fff;border:1px solid #dce6d1;border-radius:18px;padding:18px;margin:0 0 18px;display:grid;gap:12px}
@@ -132,7 +132,7 @@
 .drive-alert strong{font:800 15px Manrope,sans-serif}
 @media (prefers-reduced-motion:reduce){.box-symbol,.drive-alert,.card-skeleton span,.waterfall-bar.pending{animation:none}}
 
-/* Detección en el dispositivo y video de prueba */
+/* On-device detection and test video */
 .detection-box.live{box-shadow:none;border-width:2px;border-radius:4px;transition:left .08s linear,top .08s linear,width .08s linear,height .08s linear}
 .detection-box.live span{font-size:10px;letter-spacing:.2px;padding:2px 5px;border-radius:3px 3px 0 0}
 .detection-box.live.risk-critical,.detection-box.live.risk-high{border-color:#ffdc65}
@@ -142,7 +142,7 @@
 .video-test .action-row{margin-top:2px}
 .file-button{position:relative;cursor:pointer}.file-button input{position:absolute;inset:0;opacity:0;cursor:pointer}
 
-/* Información: panel de datos y estructuras en una sola sección */
+/* Information: dashboard and structures in a single section */
 .info-switch{padding-top:20px;padding-bottom:0}.info-switch .segmented{margin-bottom:0}
 .info-switch+.page .page-heading{padding-top:16px}
 

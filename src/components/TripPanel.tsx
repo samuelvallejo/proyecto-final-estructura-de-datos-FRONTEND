@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Flag, LocateFixed, Route, CheckCircle2 } from 'lucide-react';
 import type { Position, Trip } from '../types';
-import { addTripSample, createTrip, finishTrip, loadTrip, loadTrips } from '../services/trips';
+import { TripApi } from '../services/trips';
 import LoadingIndicator from './LoadingIndicator';
 
 interface Props { position: Position | null; trip: Trip | null; onUpdate: (trip: Trip) => void; onStart: () => void; onStop: () => void; onGps: () => void; gpsBusy: boolean; analyzing: boolean; scanning: boolean }
@@ -13,24 +13,24 @@ export default function TripPanel({ position, trip, onUpdate, onStart, onStop, o
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const validGps = Boolean(position && position.accuracy <= 100 && (!position.capturedAt || now - position.capturedAt < 15000));
-  useEffect(() => { let cancelled = false; void loadTrips().then(async data => { const current = data.trips.find(item => !item.endedAt); if (current) { const detail = await loadTrip(current.id); if (!cancelled) onUpdate(detail); } }).catch(() => { if (!cancelled) setError('No se pudieron cargar los recorridos. Reintenta.'); }); return () => { cancelled = true; }; }, [onUpdate]);
+  useEffect(() => { let cancelled = false; void TripApi.loadTrips().then(async data => { const current = data.trips.find(item => !item.endedAt); if (current) { const detail = await TripApi.loadTrip(current.id); if (!cancelled) onUpdate(detail); } }).catch(() => { if (!cancelled) setError('No se pudieron cargar los recorridos. Reintenta.'); }); return () => { cancelled = true; }; }, [onUpdate]);
   useEffect(() => {
     if (!tripId) return; let cancelled = false; let running = false;
-    const timer = setInterval(async () => { if (running) return; running = true; setSyncing(true); try { const data = await loadTrip(tripId); if (!cancelled) { onUpdate(data); setError(''); } } catch { if (!cancelled) setError('No se pudo sincronizar el recorrido. Comprueba tu conexión.'); } finally { running = false; if (!cancelled) setSyncing(false); } }, 3000);
+    const timer = setInterval(async () => { if (running) return; running = true; setSyncing(true); try { const data = await TripApi.loadTrip(tripId); if (!cancelled) { onUpdate(data); setError(''); } } catch { if (!cancelled) setError('No se pudo sincronizar el recorrido. Comprueba tu conexión.'); } finally { running = false; if (!cancelled) setSyncing(false); } }, 3000);
     return () => { cancelled = true; clearInterval(timer); };
   }, [tripId, onUpdate]);
   useEffect(() => {
     if (!tripId || !scanning || !position || !validGps || Date.now() - lastSample.current < 3000) return;
-    lastSample.current = Date.now(); void addTripSample(tripId, position).catch(() => setError('No se guardó una posición GPS. Comprueba tu conexión; el recorrido permanece abierto.'));
+    lastSample.current = Date.now(); void TripApi.addTripSample(tripId, position).catch(() => setError('No se guardó una posición GPS. Comprueba tu conexión; el recorrido permanece abierto.'));
   }, [tripId, position, validGps, scanning]);
   async function begin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!position || !validGps || busy) return;
     if ([name, pointA, pointB].some(value => value.trim().length < 2)) { setError('Completa los campos siguiendo los requisitos.'); return; }
-    setBusy(true); setError(''); try { const data = await createTrip(name.trim(), pointA.trim(), pointB.trim(), position); onUpdate(data); setNotice('Todo se ejecutó correctamente.'); onStart(); } catch { setError('No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'); } finally { setBusy(false); }
+    setBusy(true); setError(''); try { const data = await TripApi.createTrip(name.trim(), pointA.trim(), pointB.trim(), position); onUpdate(data); setNotice('Todo se ejecutó correctamente.'); onStart(); } catch { setError('No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'); } finally { setBusy(false); }
   }
   async function finish() {
     if (!trip || busy || analyzing) return; setBusy(true); setError('');
-    try { const data = await finishTrip(trip.id, validGps ? position : null); onUpdate(data); onStop(); setNotice('Todo se ejecutó correctamente.'); setName(''); setPointB(''); }
+    try { const data = await TripApi.finishTrip(trip.id, validGps ? position : null); onUpdate(data); onStop(); setNotice('Todo se ejecutó correctamente.'); setName(''); setPointB(''); }
     catch { setError('No se pudo completar la operación. Inténtalo de nuevo.'); } finally { setBusy(false); }
   }
   return <section className="journey-panel" aria-labelledby="journey-title"><div className="section-row"><h2 id="journey-title"><Route size={20} /> {active ? 'Tu recorrido está activo' : 'Registra un recorrido de A a B'}</h2>{active && <span className="journey-live">{scanning ? 'EN RECORRIDO' : 'EN PAUSA'}</span>}</div>

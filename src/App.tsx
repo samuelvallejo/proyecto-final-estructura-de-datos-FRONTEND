@@ -4,12 +4,12 @@ import {
   Crosshair, Footprints, Info, LocateFixed, MapPin, MapPinned, Radar, RefreshCw, Route, ScanLine,
   ShieldAlert, ShieldCheck, Sparkles, Square, UserRound, X, Code2, ArrowLeft, Home,
 } from 'lucide-react';
-import { ApiError, loadHealth, loadReports, loadStructures, patrolReport, scanFrame } from './services/api';
-import { addTripSample, finishTrip, loadTrip } from './services/trips';
-import { loadGeneralMap, recordPass, startDrivingTrip } from './services/profile';
-import { frameFromVideo, frameSignature, nextDelay, shouldSend, signatureDifference } from './services/frames';
-import { distanceText, durationText, peopleText, riskText, typeText } from './services/format';
-import { metersBetween, usableGPS } from './services/community';
+import { ApiClient, ApiError } from './services/api';
+import { TripApi } from './services/trips';
+import { ProfileApi } from './services/profile';
+import { FrameSampler } from './services/frames';
+import { Formatter } from './services/format';
+import { GpsTools } from './services/community';
 import type { Health, Me, Position, Report, ScanResponse, StructureStats, Trip, Vehicle } from './types';
 import { Stack } from './data-structures/Stack';
 const ReportMap = lazy(() => import('./components/ReportMap'));
@@ -25,9 +25,11 @@ import PotholeSymbol from './components/PotholeSymbol';
 import ProfileAvatar from './components/ProfileAvatar';
 import useCommunityFeed from './hooks/useCommunityFeed';
 import { useLocalDetector, useLocalScanLoop } from './hooks/useLocalDetector';
-import { hazardFromArea, track } from './services/yolo';
+import { BoxTracker, YoloCodec } from './services/yolo';
 import type { LocalBox, TrackedBox } from './services/yolo';
 import './features.css';
+import { HashSet } from './data-structures/HashSet';
+import { Sorter } from './data-structures/Sorter';
 const TripHistory = lazy(() => import('./components/TripHistory'));
 const PhotoDetector = lazy(() => import('./components/PhotoDetector'));
 const TreeExplorer = lazy(() => import('./components/trees/TreeExplorer'));
@@ -44,9 +46,9 @@ const structureLabels: Record<string, string> = {
   binarySearchTree: 'Árbol binario de búsqueda', generalTree: 'Árbol de ubicaciones',
   graph: 'Grafo de cercanía entre baches',
 };
-/** Distancia a un bache conocido para avisar durante la conducción. */
+/** Distance to a known pothole that triggers an alert while driving. */
 const KNOWN_POTHOLE_ALERT_METERS = 80;
-/** Tiempo que el símbolo permanece sobre el bache detectado entre análisis. */
+/** How long the symbol stays over the detected pothole between analyses. */
 const OVERLAY_MS = 1600;
 
 interface DriveSummary { vehicle: Vehicle; durationMs: number; detected: number; passed: number; distanceMeters?: number; trip: Trip | null }
@@ -62,7 +64,7 @@ function beep() {
     oscillator.connect(gain); gain.connect(context.destination);
     oscillator.start(); oscillator.stop(context.currentTime + .18);
     oscillator.onended = () => void context.close();
-  } catch { /* El sonido es opcional. */ }
+  } catch { /* Sound is optional. */ }
 }
 
 export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
@@ -99,7 +101,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const [structures, setStructures] = useState<StructureStats | null>(null);
   const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [communityRevision, setCommunityRevision] = useState(0);
-  // Modo conducción (moto o carro): escaneo automático, símbolo sobre el bache y alertas.
+  // Driving mode (motorcycle or car): automatic scanning, symbol over the pothole and alerts.
   const [driveVehicle, setDriveVehicle] = useState<Vehicle | null>(null);
   const [pickVehicle, setPickVehicle] = useState<Vehicle>('moto');
   const [driveStartedAt, setDriveStartedAt] = useState(0);
@@ -112,7 +114,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const driveRef = useRef<Vehicle | null>(null);
   const driveTripRef = useRef<string | null>(null);
   const creatingTrip = useRef(false);
-  const alertedPotholes = useRef(new Set<string>());
+  const alertedPotholes = useRef(new HashSet<string>());
   const lastPassAt = useRef(0);
   const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
   const { reports: nearby, updatedAt: nearbyUpdatedAt, feedError } = useCommunityFeed(location, tab === 'map' || alertsEnabled || Boolean(driveVehicle), communityRevision);
@@ -121,7 +123,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const [patrol, setPatrol] = useState<Report | null>(null);
   const [patrolBusy, setPatrolBusy] = useState(false);
   const history = useRef(new Stack<Tab>());
-  // «Información» agrupa el panel de datos y las estructuras; recuerda la última subsección abierta.
+  // "Información" groups the dashboard and the structures; it remembers the last open subsection.
   const infoView = useRef<'dashboard' | 'structures'>('dashboard');
   const [historySize, setHistorySize] = useState(0);
   const refreshSequence = useRef(0);
@@ -129,7 +131,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const locationRef = useRef<Position | null>(null);
   const locationDenied = useRef(false);
   const pendingPotholeFrame = useRef<{ frame: Blob; capturedAt: number } | null>(null);
-  // Detección en el dispositivo: YOLO analiza cada fotograma sin esperar al servidor (como en un video en vivo).
+  // On-device detection: YOLO analyzes every frame without waiting for the server (like a live video).
   const [testVideo, setTestVideo] = useState<string | null>(null);
   const [liveBoxes, setLiveBoxes] = useState<TrackedBox[]>([]);
   const [localStats, setLocalStats] = useState({ fps: 0, inferenceMs: 0, potholes: 0 });
@@ -138,7 +140,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const useLocal = detector.status === 'ready' && !localFailed;
   const trackRef = useRef<TrackedBox[]>([]);
   const trackIds = useRef(0);
-  const countedTracks = useRef(new Set<number>());
+  const countedTracks = useRef(new HashSet<number>());
   const reportBusy = useRef(false);
   const lastReportAt = useRef(0);
   const testVideoRef = useRef<string | null>(null);
@@ -147,7 +149,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     const sequence = ++refreshSequence.current;
     setLoadingReports(true);
     try {
-      const page = await loadReports(mode, append ? reports.length : 0);
+      const page = await ApiClient.loadReports(mode, append ? reports.length : 0);
       if (sequence !== refreshSequence.current) return;
       setReports(current => append ? [...current, ...page.reports.filter(item => !current.some(old => old.id === item.id))] : page.reports);
       setTotalReports(page.total); setHasMore(page.hasMore);
@@ -159,7 +161,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
 
   async function refreshGeneralMap() {
     setGeneralBusy(true);
-    try { setGeneralMap(await loadGeneralMap('all')); setError(''); }
+    try { setGeneralMap(await ProfileApi.loadGeneralMap('all')); setError(''); }
     catch (cause) { setError((cause as Error).message); }
     finally { setGeneralBusy(false); }
   }
@@ -182,10 +184,10 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     }
     if (position.accuracy > 100) return;
 
-    // No enviar el mismo fotograma varias veces si el GPS emite actualizaciones seguidas.
+    // Do not send the same frame several times when the GPS emits consecutive updates.
     pendingPotholeFrame.current = null;
     try {
-      const response = await scanFrame(pending.frame, position, new AbortController().signal, tripIdRef.current, 'still');
+      const response = await ApiClient.scanFrame(pending.frame, position, new AbortController().signal, tripIdRef.current, 'still');
       saveReportedFinding(response);
       setLocationError('');
     } catch (cause) {
@@ -232,18 +234,18 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   useEffect(() => {
     let cancelled = false;
     const sequence = ++refreshSequence.current;
-    void loadReports('recent').then(page => {
+    void ApiClient.loadReports('recent').then(page => {
       if (cancelled || sequence !== refreshSequence.current) return;
       setReports(page.reports); setTotalReports(page.total); setHasMore(page.hasMore);
     }).catch(cause => { if (!cancelled && sequence === refreshSequence.current) setError((cause as Error).message); })
       .finally(() => { if (!cancelled && sequence === refreshSequence.current) setLoadingReports(false); });
-    void loadHealth().then(data => { if (!cancelled) setHealth(data); }).catch(() => {});
+    void ApiClient.loadHealth().then(data => { if (!cancelled) setHealth(data); }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
   useEffect(() => {
     if (tab !== 'structures') return;
     const controller = new AbortController();
-    void loadStructures().then(data => { if (!controller.signal.aborted) setStructures(data); })
+    void ApiClient.loadStructures().then(data => { if (!controller.signal.aborted) setStructures(data); })
       .catch(cause => { if (!controller.signal.aborted) setError((cause as Error).message); });
     return () => controller.abort();
   }, [tab]);
@@ -283,7 +285,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     const video = videoRef.current;
 
     if (testVideo && video) {
-      // Video de prueba: misma detección que con la cámara, sin GPS ni reportes.
+      // Test video: same detection as with the camera, without GPS or reports.
       video.srcObject = null;
       video.src = testVideo;
       video.loop = true;
@@ -323,11 +325,11 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
 
   function alertDriver(text: string) {
     setDriveAlert({ text, at: Date.now() });
-    try { navigator.vibrate?.([140, 70, 140]); } catch { /* Vibración opcional. */ }
+    try { navigator.vibrate?.([140, 70, 140]); } catch { /* Vibration is optional. */ }
     beep();
   }
 
-  // Respaldo por servidor: solo cuando el detector del dispositivo no está disponible.
+  // Server fallback: only when the on-device detector is unavailable.
   useEffect(() => {
     if (!scanning || !cameraReady || tab !== 'scan' || useLocal || detector.status === 'loading') return;
     let cancelled = false;
@@ -344,9 +346,9 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
         timer = setTimeout(analyze, 300);
         return;
       }
-      // Vehículo detenido: si la imagen casi no cambió, no se repite el mismo análisis.
-      const signature = frameSignature(video);
-      if (!firstFrame && !lastHadPothole && !shouldSend(signatureDifference(signature, previous), skipped)) {
+      // Stopped vehicle: if the image barely changed, the same analysis is not repeated.
+      const signature = FrameSampler.frameSignature(video);
+      if (!firstFrame && !lastHadPothole && !FrameSampler.shouldSend(FrameSampler.signatureDifference(signature, previous), skipped)) {
         skipped += 1;
         setSkippedFrames(current => current + 1);
         timer = setTimeout(analyze, 350);
@@ -357,15 +359,15 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
       const sentAt = performance.now();
       setAnalyzing(true);
       try {
-        // Esperar brevemente el GPS inicial; no perder una detección por el permiso pendiente.
+        // Briefly wait for the first GPS fix; never lose a detection to a pending permission.
         if (!locationRef.current && !locationDenied.current && firstFrame) {
           setLocationError('Obteniendo tu ubicación. Acepta el permiso para guardar los hallazgos en el mapa.');
           await new Promise(resolve => setTimeout(resolve, 600));
           if (cancelled) return;
         }
-        const frame = await frameFromVideo(video);
+        const frame = await FrameSampler.frameFromVideo(video);
         if (cancelled) return;
-        const response = await scanFrame(frame, locationRef.current, controller.signal, tripIdRef.current, 'live');
+        const response = await ApiClient.scanFrame(frame, locationRef.current, controller.signal, tripIdRef.current, 'live');
         if (cancelled) return;
         firstFrame = false;
         lastHadPothole = response.result.isPothole;
@@ -375,7 +377,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
         setScanCount(current => current + 1);
         setLastCheck(new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         if (response.result.isPothole) {
-          // El símbolo de bache queda sobre cada detección hasta el siguiente análisis.
+          // The pothole symbol stays over each detection until the next analysis.
           setOverlay(response);
           clearTimeout(overlayTimer);
           overlayTimer = setTimeout(() => setOverlay(null), OVERLAY_MS);
@@ -393,8 +395,8 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
             }
           }
         }
-        // Pedir el siguiente fotograma en cuanto el servidor lo permite, descontando la latencia.
-        timer = setTimeout(analyze, nextDelay((response.nextScanMs ?? 1500) + 50, performance.now() - sentAt));
+        // Request the next frame as soon as the server allows it, discounting the latency.
+        timer = setTimeout(analyze, FrameSampler.nextDelay((response.nextScanMs ?? 1500) + 50, performance.now() - sentAt));
       } catch (cause) {
         if (!cancelled) {
           setError((cause as Error).message);
@@ -410,15 +412,15 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     return () => { cancelled = true; clearTimeout(timer); clearTimeout(overlayTimer); controller.abort(); setAnalyzing(false); };
   }, [scanning, cameraReady, tab, useLocal, detector.status]);
 
-  /** Envía al servidor el fotograma con baches para guardarlo con GPS; el servidor confirma con el mismo modelo. */
+  /** Sends the frame with potholes to the server to store it with GPS; the server confirms with the same model. */
   async function reportLocalDetection() {
     const video = videoRef.current;
     if (!video || reportBusy.current || testVideoRef.current || Date.now() - lastReportAt.current < 1200) return;
     reportBusy.current = true;
     lastReportAt.current = Date.now();
     try {
-      const frame = await frameFromVideo(video);
-      const response = await scanFrame(frame, locationRef.current, new AbortController().signal, tripIdRef.current, 'live');
+      const frame = await FrameSampler.frameFromVideo(video);
+      const response = await ApiClient.scanFrame(frame, locationRef.current, new AbortController().signal, tripIdRef.current, 'live');
       setLastScan(response);
       if (response.result.isPothole) {
         saveReportedFinding(response);
@@ -432,11 +434,11 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   }
 
   const handleLocalResult = useCallback((boxes: LocalBox[], stats: { inferenceMs: number; fps: number }) => {
-    const tracked = track(trackRef.current, boxes, () => ++trackIds.current);
+    const tracked = BoxTracker.track(trackRef.current, boxes, () => ++trackIds.current);
     trackRef.current = tracked;
     setLiveBoxes(tracked);
     setScanCount(current => current + 1);
-    // Un bache cuenta cuando aparece en dos fotogramas seguidos: evita falsos positivos de un solo cuadro.
+    // A pothole counts once it appears in two consecutive frames: avoids single-frame false positives.
     const fresh = tracked.filter(box => box.hits >= 2 && box.score >= .35 && !countedTracks.current.has(box.id));
     fresh.forEach(box => countedTracks.current.add(box.id));
     setLocalStats(current => ({ fps: stats.fps, inferenceMs: stats.inferenceMs, potholes: current.potholes + fresh.length }));
@@ -474,48 +476,49 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     setTestVideo(null);
   }
   function resetLocalTracking() {
-    trackRef.current = []; countedTracks.current = new Set();
+    trackRef.current = []; countedTracks.current = new HashSet();
     setLiveBoxes([]); setLocalStats({ fps: 0, inferenceMs: 0, potholes: 0 }); setScanCount(0);
   }
 
-  // Reloj del modo conducción y vigencia de la alerta.
+  // Driving-mode clock and alert expiry.
   useEffect(() => {
     if (!driveVehicle) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [driveVehicle]);
 
-  // Crear la sesión de conducción (recorrido con vehículo) cuando hay GPS válido.
+  // Create the driving session (trip with a vehicle) once there is a valid GPS fix.
   useEffect(() => {
-    if (!driveVehicle || driveTripRef.current || creatingTrip.current || !usableGPS(location) || location.accuracy > 100) return;
+    if (!driveVehicle || driveTripRef.current || creatingTrip.current || !GpsTools.usableGPS(location) || location.accuracy > 100) return;
     if (activeTrip && !activeTrip.endedAt) { driveTripRef.current = activeTrip.id; return; }
     creatingTrip.current = true;
-    void startDrivingTrip(driveVehicle, location).then(trip => { driveTripRef.current = trip.id; updateTrip(trip); })
+    void ProfileApi.startDrivingTrip(driveVehicle, location).then(trip => { driveTripRef.current = trip.id; updateTrip(trip); })
       .catch(cause => setError((cause as Error).message))
       .finally(() => { creatingTrip.current = false; });
   }, [driveVehicle, location, activeTrip, updateTrip]);
 
-  // Pasos por baches conocidos: muestras GPS del recorrido (o pasos sueltos) cada 3 s, con alerta de cercanía.
+  // Passes over known potholes: trip GPS samples (or single passes) every 3 s, with a proximity alert.
   useEffect(() => {
-    if (!driveVehicle || !usableGPS(location) || Date.now() - lastPassAt.current < 3000) return;
+    if (!driveVehicle || !GpsTools.usableGPS(location) || Date.now() - lastPassAt.current < 3000) return;
     lastPassAt.current = Date.now();
     const tripId = driveTripRef.current;
-    const call = tripId ? addTripSample(tripId, location) as Promise<{ passed?: number }> : recordPass(location);
+    const call = tripId ? TripApi.addTripSample(tripId, location) as Promise<{ passed?: number }> : ProfileApi.recordPass(location);
     void call.then(result => { if (result.passed) setDrivePassed(current => current + (result.passed || 0)); }).catch(() => {});
-    const closest = nearby.filter(report => !['REPAIRED', 'REJECTED'].includes(report.status))
-      .map(report => ({ report, meters: metersBetween(location, report.location) }))
-      .filter(item => item.meters <= KNOWN_POTHOLE_ALERT_METERS).sort((a, b) => a.meters - b.meters)[0];
+    const candidates = nearby.filter(report => !['REPAIRED', 'REJECTED'].includes(report.status))
+      .map(report => ({ report, meters: GpsTools.metersBetween(location, report.location) }))
+      .filter(item => item.meters <= KNOWN_POTHOLE_ALERT_METERS);
+    const closest = Sorter.min(candidates, (a, b) => a.meters - b.meters);
     if (closest && !alertedPotholes.current.has(closest.report.id)) {
       alertedPotholes.current.add(closest.report.id);
-      alertDriver(`Bache conocido a ${Math.round(closest.meters)} m · ${riskText[closest.report.hazardLevel]}`);
+      alertDriver(`Bache conocido a ${Math.round(closest.meters)} m · ${Formatter.riskText[closest.report.hazardLevel]}`);
     }
   }, [driveVehicle, location, nearby]);
 
-  // Mantener actualizado el recorrido de conducción (baches del trayecto).
+  // Keep the driving trip up to date (potholes along the way).
   useEffect(() => {
     if (!driveVehicle || !activeTrip || activeTrip.endedAt) return;
     const id = activeTrip.id;
-    const timer = setInterval(() => { void loadTrip(id).then(updateTrip).catch(() => {}); }, 10000);
+    const timer = setInterval(() => { void TripApi.loadTrip(id).then(updateTrip).catch(() => {}); }, 10000);
     return () => clearInterval(timer);
   }, [driveVehicle, activeTrip, updateTrip]);
 
@@ -527,7 +530,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     setLastScan(null); setOverlay(null); setScanCount(0); setSkippedFrames(0); setLastCheck('');
     resetLocalTracking();
     if (testVideoRef.current) { URL.revokeObjectURL(testVideoRef.current); testVideoRef.current = null; setTestVideo(null); }
-    // Solicitar GPS durante el toque que inicia el escaneo mejora el permiso en Safari móvil.
+    // Requesting GPS during the tap that starts scanning improves the permission prompt on mobile Safari.
     retryLocation();
     setScanning(true);
     setTab('scan');
@@ -544,7 +547,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   async function startDrive(vehicle: Vehicle) {
     driveRef.current = vehicle;
     driveTripRef.current = activeTrip && !activeTrip.endedAt ? activeTrip.id : null;
-    alertedPotholes.current = new Set();
+    alertedPotholes.current = new HashSet();
     setDriveSummary(null); setDriveDetected(0); setDrivePassed(0); setDriveAlert(null);
     setDriveStartedAt(Date.now()); setNow(Date.now());
     setDriveVehicle(vehicle);
@@ -563,7 +566,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     let trip: Trip | null = null;
     const tripId = driveTripRef.current;
     if (tripId) {
-      try { trip = await finishTrip(tripId, usableGPS(locationRef.current) ? locationRef.current : null); updateTrip(trip); }
+      try { trip = await TripApi.finishTrip(tripId, GpsTools.usableGPS(locationRef.current) ? locationRef.current : null); updateTrip(trip); }
       catch (cause) { setError((cause as Error).message); }
     }
     setDriveSummary({ vehicle, durationMs: trip?.durationMs ?? Date.now() - driveStartedAt,
@@ -593,7 +596,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   }
   async function patrolStep(direction: 'next' | 'previous') {
     setPatrolBusy(true);
-    try { const nextReport = (await patrolReport(patrol?.id, direction)).report; setPatrol(nextReport); setMapFocus(nextReport); }
+    try { const nextReport = (await ApiClient.patrolReport(patrol?.id, direction)).report; setPatrol(nextReport); setMapFocus(nextReport); }
     catch (cause) { setError((cause as Error).message); }
     finally { setPatrolBusy(false); }
   }
@@ -622,7 +625,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
           <span className="header-pill"><span className="green-dot" /> {me?.isAdmin ? 'ADMINISTRADOR' : 'VÍAS MÁS SEGURAS'}</span>
           <ProfileAvatar me={me} onNavigate={navigate} onLogout={() => { if (driveRef.current) void stopDrive(); stop(); onLogout(); }} logoutBusy={logoutBusy} />
         </header>
-        <ConnectionStatus health={health} busy={loadingReports} onRetry={() => { void refreshReports(); void loadHealth().then(setHealth).catch(() => setHealth(null)); }} />
+        <ConnectionStatus health={health} busy={loadingReports} onRetry={() => { void refreshReports(); void ApiClient.loadHealth().then(setHealth).catch(() => setHealth(null)); }} />
         {!driving && <NearbyHazards enabled={alertsEnabled} onToggle={() => { if (!alertsEnabled) retryLocation(); setAlertsEnabled(value => !value); }} location={location} reports={nearby} updatedAt={nearbyUpdatedAt} feedError={feedError} onMap={showOnMap} onRetry={refreshCommunity} />}
         {historySize > 0 && !driving && <button className="back-link" onClick={goBack}><ArrowLeft size={15} /> Volver</button>}
 
@@ -659,10 +662,10 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
             {driveSummary && !driving && <section className="drive-summary" aria-live="polite">
               <h2>{driveSummary.vehicle === 'moto' ? <Bike size={20} /> : <Car size={20} />} Sesión de conducción terminada</h2>
               <div className="session-metrics big">
-                <span><Clock3 size={16} /><b>{durationText(driveSummary.durationMs)}</b>duración</span>
+                <span><Clock3 size={16} /><b>{Formatter.durationText(driveSummary.durationMs)}</b>duración</span>
                 <span><MapPinned size={16} /><b>{driveSummary.detected}</b>baches en el trayecto</span>
                 <span><Footprints size={16} /><b>{driveSummary.passed}</b>baches conocidos</span>
-                {driveSummary.distanceMeters != null && <span><Route size={16} /><b>{distanceText(driveSummary.distanceMeters)}</b>distancia</span>}
+                {driveSummary.distanceMeters != null && <span><Route size={16} /><b>{Formatter.distanceText(driveSummary.distanceMeters)}</b>distancia</span>}
               </div>
               <p className="form-help">Guardado en tu perfil, dentro del historial de recorridos y de baches.</p>
               <div className="action-row"><button className="button-secondary" onClick={() => setDriveSummary(null)}><X size={16} /> Cerrar</button><button className="button-primary" onClick={() => navigate('profile')}><UserRound size={16} /> Ver en mi perfil</button></div>
@@ -680,7 +683,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
             {!driving && <TripPanel position={location} trip={activeTrip} onUpdate={updateTrip} onStart={start} onStop={stop} onGps={retryLocation} gpsBusy={requestingLocation} analyzing={analyzing} scanning={scanning} />}
 
             {driving && <section className="drive-hud" aria-label="Panel de conducción">
-              <div><Clock3 size={16} /><b>{durationText(now - driveStartedAt)}</b><small>tiempo</small></div>
+              <div><Clock3 size={16} /><b>{Formatter.durationText(now - driveStartedAt)}</b><small>tiempo</small></div>
               <div><MapPinned size={16} /><b>{driveDetected}</b><small>detectados</small></div>
               <div><Footprints size={16} /><b>{drivePassed}</b><small>conocidos</small></div>
               <div><Activity size={16} /><b>{useLocal ? (localStats.fps ? `${Math.round(localStats.fps)} FPS` : '—') : scanLatency ? `${scanLatency} ms` : '—'}</b><small>{useLocal ? 'en vivo' : 'análisis'}</small></div>
@@ -699,14 +702,14 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
               <div className="scan-corner top-left" /><div className="scan-corner top-right" />
               <div className="scan-corner bottom-left" /><div className="scan-corner bottom-right" />
               {scanning && <div className="scan-beam" />}
-              {scanning && useLocal && liveBoxes.map(box => <div key={box.id} className={`detection-box live risk-${hazardFromArea(box).level.toLowerCase()}`} style={{
+              {scanning && useLocal && liveBoxes.map(box => <div key={box.id} className={`detection-box live risk-${YoloCodec.hazardFromArea(box).level.toLowerCase()}`} style={{
                 left: `${box.x1 * 100}%`, top: `${box.y1 * 100}%`, width: `${(box.x2 - box.x1) * 100}%`, height: `${(box.y2 - box.y1) * 100}%`,
               }}><span>Bache {box.score.toFixed(2)}</span>{box.hits >= 2 && <i className="box-symbol"><PotholeSymbol size={Math.max(20, Math.min(driving ? 52 : 40, (box.x2 - box.x1) * 220))} /></i>}</div>)}
               {scanning && !useLocal && overlayDetections.map((detection, index) => detection.boundingBox && <div key={index} className="detection-box" style={{
                 left: `${detection.boundingBox.xmin / 10}%`, top: `${detection.boundingBox.ymin / 10}%`,
                 width: `${(detection.boundingBox.xmax - detection.boundingBox.xmin) / 10}%`,
                 height: `${(detection.boundingBox.ymax - detection.boundingBox.ymin) / 10}%`,
-              }}><span>BACHE {index + 1}{detection.confidence ? ` · ${Math.round(detection.confidence * 100)}%` : ''} · {riskText[detection.hazardLevel]}</span>
+              }}><span>BACHE {index + 1}{detection.confidence ? ` · ${Math.round(detection.confidence * 100)}%` : ''} · {Formatter.riskText[detection.hazardLevel]}</span>
                 <i className="box-symbol"><PotholeSymbol size={driving ? 52 : 38} /></i></div>)}
               {driving && driveAlert && now - driveAlert.at < 3500 && <div className="drive-alert" role="alert"><PotholeSymbol size={34} /><strong>{driveAlert.text}</strong></div>}
               {scanning && !cameraReady && <div className="camera-preparing"><LoadingIndicator label="Preparando cámara…" /></div>}
@@ -742,16 +745,16 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
               <section className="detection-card">
                 <div className="detection-top">
                   <span className="section-kicker"><Sparkles size={14} /> {finding.provider === 'gemini' ? 'GEMINI' : 'IA LOCAL'} · POSIBLE DAÑO</span>
-                  <span className={`risk-chip risk-${finding.result.hazardLevel.toLowerCase()}`}>{riskText[finding.result.hazardLevel]}</span>
+                  <span className={`risk-chip risk-${finding.result.hazardLevel.toLowerCase()}`}>{Formatter.riskText[finding.result.hazardLevel]}</span>
                 </div>
-                <h2>{typeText[finding.result.potholeType || 'OTRO_DANO']} detectado</h2>
+                <h2>{Formatter.typeText[finding.result.potholeType || 'OTRO_DANO']} detectado</h2>
                 <p>{finding.result.aiDescription}</p>
                 {finding.fallback && <p className="precision-note">Gemini no disponible. Se utilizó el detector local gratuito.</p>}
                 <div className="risk-meter"><span style={{ width: `${finding.result.hazardScore}%` }} /></div>
                 <div className="risk-caption"><span>Riesgo visual orientativo</span><strong>{finding.result.hazardScore}/100</strong></div>
                 {finding.result.riskFactors.length > 0 && <div className="factors">{finding.result.riskFactors.map((factor, i) => <span key={i}>{factor}</span>)}</div>}
                 <p className="precision-note"><Crosshair size={14} /> {finding.report
-                  ? finding.existing ? `Este punto ya estaba registrado. ${peopleText(finding.report.peopleCount)}.` : 'Registrado automáticamente con el GPS del celular. Pendiente de verificación.'
+                  ? finding.existing ? `Este punto ya estaba registrado. ${Formatter.peopleText(finding.report.peopleCount)}.` : 'Registrado automáticamente con el GPS del celular. Pendiente de verificación.'
                   : finding.locationNote || 'No se pudo ubicar este daño en el mapa.'}</p>
                 {finding.report && <p className="precision-note">{[finding.report.zone.street, finding.report.zone.neighborhood, finding.report.zone.city].filter(Boolean).join(', ') || 'Ubicación del celular'} · {finding.report.location.lat.toFixed(6)}, {finding.report.location.lng.toFixed(6)} · ±{Math.round(finding.report.location.accuracy)} m</p>}
                 {!finding.report && <p className="precision-note">Permite el GPS y toca “Reintentar ubicación”. Si el fotograma sigue reciente, se guardará con la posición actual; si ya pasó más tiempo, vuelve a enfocar el bache. La imagen por sí sola no revela dónde fue tomada.</p>}
@@ -797,7 +800,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
                 <div className="stat-tile"><strong>{generalMap.passesTotal}</strong><span>pasos registrados</span></div>
               </>}
             </div>}
-            <label className="map-risk-filter">Mostrar riesgo<select value={mapRisk} onChange={event => { setMapRisk(event.target.value); setMapFocus(null); setPatrol(null); }}><option value="">Todos los niveles</option>{Object.entries(riskText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label className="map-risk-filter">Mostrar riesgo<select value={mapRisk} onChange={event => { setMapRisk(event.target.value); setMapFocus(null); setPatrol(null); }}><option value="">Todos los niveles</option>{Object.entries(Formatter.riskText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <p className="section-description">{mapView === 'general'
               ? 'Todos los huecos registrados, incluidos los reparados. Cada símbolo indica cuántas personas han pasado por ese mismo hueco; la estadística se guarda cuando alguien conduce o recorre cerca.'
               : 'Los símbolos de huecos incluyen avisos de otros usuarios y detecciones con GPS. Activa las alertas para recibir una advertencia de cercanía. Toca uno para ver su ubicación, riesgo y cuántas personas han pasado.'}</p>
@@ -812,7 +815,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
             {patrol && !mapFocus && <ReportCard report={patrol} />}
             {mapView === 'general' ? <>
               <div className="section-row"><h2>Huecos con más personas</h2><span>{generalMap?.potholes.length || 0} cargados</span></div>
-              {[...(generalMap?.potholes || [])].sort((a, b) => (b.peopleCount || 0) - (a.peopleCount || 0)).slice(0, 10).map(item => <ReportCard key={item.id} report={item} onMap={report => setMapFocus(report)} />)}
+              {Sorter.mergeSort(generalMap?.potholes || [], (a, b) => (b.peopleCount || 0) - (a.peopleCount || 0)).toArray().slice(0, 10).map(item => <ReportCard key={item.id} report={item} onMap={report => setMapFocus(report)} />)}
             </> : <>
               <div className="section-row"><h2>{location ? 'A menos de 5 km' : 'Reportes registrados'}</h2><span>{totalReports} en plataforma</span></div>
               {error && <div className="message error"><AlertTriangle size={17} />{error}</div>}

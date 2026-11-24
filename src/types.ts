@@ -18,9 +18,9 @@ export interface Report extends ScanResult {
   zone: { street: string | null; neighborhood: string | null; city: string | null; fullAddress: string | null };
   source?: 'COMMUNITY' | 'YOLO';
   status: ReportStatus;
-  /** Bache físico al que pertenece el reporte. */
+  /** Physical pothole the report belongs to. */
   potholeId?: string;
-  /** Veces que alguien pasó por este hueco y personas distintas que lo hicieron. */
+  /** Times someone passed over this pothole and the distinct people who did. */
   passCount?: number;
   peopleCount?: number;
   lastPassAt?: number | null;
@@ -40,8 +40,8 @@ export interface ScanResponse {
 }
 export interface ReportsPage { reports: Report[]; total: number; hasMore: boolean }
 export interface Health { status: string; database?: 'up' | 'down'; model?: 'ready' | 'unavailable' }
-export interface PhotoDetection { clase: 'pothole'; confianza: number; bbox: [number, number, number, number] }
-export interface PhotoDetections { total_baches: number; ancho: number; alto: number; detecciones: PhotoDetection[] }
+export interface PhotoDetection { label: 'pothole'; confidence: number; bbox: [number, number, number, number] }
+export interface PhotoDetections { count: number; width: number; height: number; detections: PhotoDetection[] }
 export type Vehicle = 'moto' | 'carro';
 export interface Trip {
   id: string; name: string; pointA: string; pointB: string; start: Position; end: Position | null;

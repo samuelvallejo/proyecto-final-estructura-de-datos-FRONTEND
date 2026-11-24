@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, LogIn, ShieldCheck, Truck, Wrench } from 'lucide-react';
 import type { DemoAccount } from '../types';
-import { loadDemoAccounts } from '../services/profile';
+import { ProfileApi } from '../services/profile';
 
 const icons = { Administrador: ShieldCheck, Operario: Wrench, Conductor: Truck };
 
-/** Credenciales para copiar y pegar, o entrar directamente con uno de los tres botones. */
+/** Credentials to copy and paste, or sign in directly with one of the three buttons. */
 export default function DemoAccounts({ busy, onUse }: { busy: boolean; onUse: (account: DemoAccount) => void }) {
   const [accounts, setAccounts] = useState<DemoAccount[]>([]);
   const [copied, setCopied] = useState('');
   useEffect(() => {
     let alive = true;
-    void loadDemoAccounts().then(data => { if (alive && data.enabled) setAccounts(data.accounts); }).catch(() => {});
+    void ProfileApi.loadDemoAccounts().then(data => { if (alive && data.enabled) setAccounts(data.accounts); }).catch(() => {});
     return () => { alive = false; };
   }, []);
   async function copy(key: string, value: string) {

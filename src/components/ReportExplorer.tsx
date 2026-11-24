@@ -2,8 +2,8 @@ import { useState } from 'react';
 import '../trees.css';
 import { Download, MapPin, Search, Star } from 'lucide-react';
 import type { Report } from '../types';
-import { damageLabels, filterReports, reportsCsv, riskLabels } from '../services/reportTools';
-import { orderReports } from '../services/reportTree';
+import { ReportTools } from '../services/reportTools';
+import { ReportRiskIndex } from '../services/reportTree';
 
 interface Props { reports: Report[]; total: number; loading: boolean; onMap: (report: Report) => void }
 const storageKey = 'bachescan-favorites-v1';
@@ -21,7 +21,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
   const [favorites, setFavorites] = useState(readFavorites);
   const [notice, setNotice] = useState('');
   const [treeOrder, setTreeOrder] = useState<'original' | 'ascending' | 'descending'>('original');
-  const visible = orderReports(filterReports(reports, { query, risk, damage, favoritesOnly }, favorites), treeOrder);
+  const visible = ReportRiskIndex.orderReports(ReportTools.filterReports(reports, { query, risk, damage, favoritesOnly }, favorites), treeOrder);
   const filtered = Boolean(query || risk || damage || favoritesOnly);
   function reset() { setQuery(''); setRisk(''); setDamage(''); setFavoritesOnly(false); }
   function toggleFavorite(id: string) {
@@ -31,7 +31,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
     catch { setNotice('Favoritos disponibles durante esta sesión; el navegador no permite guardarlos.'); }
   }
   function download() {
-    const url = URL.createObjectURL(new Blob([reportsCsv(visible)], { type: 'text/csv;charset=utf-8' }));
+    const url = URL.createObjectURL(new Blob([ReportTools.reportsCsv(visible)], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url; link.download = `bachescan-reportes-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.append(link); link.click(); link.remove();
@@ -43,8 +43,8 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
       <label className="search-control"><span><Search size={15} /> Buscar reportes</span>
         <input type="search" maxLength={120} aria-describedby="report-search-help" value={query} onChange={event => setQuery(event.target.value.slice(0,120))} placeholder="Calle, barrio, ciudad o daño" /></label>
       <div className="explorer-selects">
-        <label>Nivel de riesgo<select value={risk} onChange={event => setRisk(event.target.value)}><option value="">Todos los niveles</option>{Object.entries(riskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Tipo de daño<select value={damage} onChange={event => setDamage(event.target.value)}><option value="">Todos los daños</option>{Object.entries(damageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Nivel de riesgo<select value={risk} onChange={event => setRisk(event.target.value)}><option value="">Todos los niveles</option>{Object.entries(ReportTools.riskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Tipo de daño<select value={damage} onChange={event => setDamage(event.target.value)}><option value="">Todos los daños</option>{Object.entries(ReportTools.damageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       </div>
       <label className="tree-order">Ordenar los reportes cargados<select value={treeOrder} onChange={event => setTreeOrder(event.target.value as typeof treeOrder)}><option value="original">Conservar orden de la consulta</option><option value="descending">Mayor riesgo primero (árbol binario)</option><option value="ascending">Menor riesgo primero (árbol binario)</option></select></label>
       <label className="favorite-filter"><input type="checkbox" checked={favoritesOnly} onChange={event => setFavoritesOnly(event.target.checked)} /> Solo favoritos de este navegador</label>
@@ -56,7 +56,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
     {notice && <p className="explorer-help" role="status">{notice}</p>}
     {!loading && !visible.length && reports.length > 0 && <div className="empty-state"><Search size={26} /><strong>No hay coincidencias</strong><p>Prueba otra búsqueda o limpia los filtros.</p><button className="button-secondary" onClick={reset}>Mostrar todos</button></div>}
     {visible.map(report => <article key={report.id} className="explorer-report">
-      <div className="report-title"><strong>{damageLabels[report.potholeType || 'OTRO_DANO']}</strong><span className={`risk-label risk-${report.hazardLevel.toLowerCase()}`}>{riskLabels[report.hazardLevel]}</span>
+      <div className="report-title"><strong>{ReportTools.damageLabels[report.potholeType || 'OTRO_DANO']}</strong><span className={`risk-label risk-${report.hazardLevel.toLowerCase()}`}>{ReportTools.riskLabels[report.hazardLevel]}</span>
         <button className="favorite-button" aria-label={`${favorites.includes(report.id) ? 'Quitar de' : 'Añadir a'} favoritos: ${report.id}`} aria-pressed={favorites.includes(report.id)} onClick={() => toggleFavorite(report.id)}><Star size={20} fill={favorites.includes(report.id) ? 'currentColor' : 'none'} /></button></div>
       <p>{[report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', ') || 'Dirección no disponible'}</p>
       <small>{new Date(report.timestamp).toLocaleString('es-CO')} · Riesgo {report.hazardScore}/100 · Sin verificar</small>

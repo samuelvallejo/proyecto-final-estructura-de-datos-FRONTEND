@@ -5,8 +5,10 @@ import '../community.css';
 import type { Position, Report, Trip } from '../types';
 import { LocateFixed, Maximize2 } from 'lucide-react';
 import type { GraphEdge } from '../types/graphs';
-import { edgeKey, pathEdges } from '../services/graphView';
-import { peopleText, statusText } from '../services/format';
+import { GraphView } from '../services/graphView';
+import { Formatter } from '../services/format';
+import { HashMap } from '../data-structures/HashMap';
+import { Sorter } from '../data-structures/Sorter';
 
 interface Props { reports: Report[]; location: Position | null; focus?: Report | null; onSelect?: (report: Report) => void; trip?: Trip | null; connections?: GraphEdge[]; connectionPath?: string[] }
 export default function ReportMap({ reports, location, focus, onSelect, trip, connections, connectionPath }: Props) {
@@ -44,14 +46,14 @@ export default function ReportMap({ reports, location, focus, onSelect, trip, co
     if (!map.current || !layer.current) return;
     layer.current.clearLayers();
     if (connections) {
-      const byId = new Map(reports.map(report => [report.id, report]));
-      const selected = pathEdges(connectionPath || []);
-      // Dibujar primero conexiones de cercanía; nunca presentarlas como navegación vial.
-      const ordered = [...connections].sort((a, b) => Number(selected.has(edgeKey(a.source, a.target))) - Number(selected.has(edgeKey(b.source, b.target))));
+      const byId = HashMap.from(reports.map(report => [report.id, report] as const));
+      const selected = GraphView.pathEdges(connectionPath || []);
+      // Draw proximity links first; never present them as road navigation.
+      const ordered = Sorter.mergeSort(connections, (a, b) => Number(selected.has(GraphView.edgeKey(a.source, a.target))) - Number(selected.has(GraphView.edgeKey(b.source, b.target))));
       for (const edge of ordered) {
         const source = byId.get(edge.source), target = byId.get(edge.target);
         if (!source || !target) continue;
-        const active = selected.has(edgeKey(edge.source, edge.target));
+        const active = selected.has(GraphView.edgeKey(edge.source, edge.target));
         const hint = document.createElement('span'); hint.textContent = `Cercanía geográfica: ${Math.round(edge.distanceMeters)} m. No representa una calle.`;
         L.polyline([[source.location.lat, source.location.lng], [target.location.lat, target.location.lng]],
           { color: active ? '#277346' : '#8b9c7c', weight: active ? 5 : 2, opacity: active ? .95 : .4, dashArray: active ? undefined : '5 7' }).addTo(layer.current).bindTooltip(hint);
@@ -75,10 +77,10 @@ export default function ReportMap({ reports, location, focus, onSelect, trip, co
       const levels = { LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto', CRITICAL: 'Crítico' };
       const people = document.createElement('div');
       people.className = 'popup-people';
-      people.textContent = `${peopleText(report.peopleCount)}${report.passCount ? ` · ${report.passCount} pasos` : ''}`;
+      people.textContent = `${Formatter.peopleText(report.peopleCount)}${report.passCount ? ` · ${report.passCount} pasos` : ''}`;
       popup.append(people);
       for (const text of [
-        report.status !== 'UNVERIFIED' ? `Estado: ${statusText[report.status] || report.status}` : '',
+        report.status !== 'UNVERIFIED' ? `Estado: ${Formatter.statusText[report.status] || report.status}` : '',
         `Riesgo ${levels[report.hazardLevel]}: ${report.hazardScore}/100`,
         [report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', '),
         `${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}`,

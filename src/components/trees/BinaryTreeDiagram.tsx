@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { BinaryReportTree } from '../../types/trees';
-import { binaryLayout } from '../../services/treeView';
+import { TreeView } from '../../services/treeView';
+import { HashMap } from '../../data-structures/HashMap';
 interface Props { tree: BinaryReportTree; selectedId: string | null; path: string[]; onSelect: (id: string) => void }
 export default function BinaryTreeDiagram({ tree, selectedId, path, onSelect }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
-  const layout = useMemo(() => binaryLayout(tree), [tree]);
+  const layout = useMemo(() => TreeView.binaryLayout(tree), [tree]);
   useEffect(() => {
     const container = viewport.current;
     if (container) container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
   }, [tree.rootId]);
-  const positions = new Map(layout.map(node => [node.id, node]));
-  const nodes = new Map(tree.nodes.map(node => [node.id, node]));
+  const positions = HashMap.from(layout.map(node => [node.id, node] as const));
+  const nodes = HashMap.from(tree.nodes.map(node => [node.id, node] as const));
   if (!tree.rootId) return <p className="tree-empty">No hay nodos en este intervalo de riesgo.</p>;
   const height = Math.max(...layout.map(node => node.y)) + 78;
   return <div className="binary-diagram">

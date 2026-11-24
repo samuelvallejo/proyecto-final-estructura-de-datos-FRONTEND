@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { BarChart3, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import type { Me } from '../types';
-import { avatarColor, initialsOf } from '../services/format';
+import { Formatter } from '../services/format';
 
 export function Avatar({ name, initials, size = 36 }: { name: string; initials?: string; size?: number }) {
-  return <span className="avatar" aria-hidden="true" style={{ width: size, height: size, fontSize: Math.round(size * .38), background: avatarColor(name) }}>
-    {initials || initialsOf(name)}
+  return <span className="avatar" aria-hidden="true" style={{ width: size, height: size, fontSize: Math.round(size * .38), background: Formatter.avatarColor(name) }}>
+    {initials || Formatter.initialsOf(name)}
   </span>;
 }
 
 interface Props { me: Me | null; onNavigate: (tab: 'profile' | 'dashboard' | 'admin') => void; onLogout: () => void; logoutBusy: boolean }
 
-/** Icono de perfil automático: iniciales y color propios de cada cuenta, con menú rápido. */
+/** Automatic profile icon: initials and color of each account, with a quick menu. */
 export default function ProfileAvatar({ me, onNavigate, onLogout, logoutBusy }: Props) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);

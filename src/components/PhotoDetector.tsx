@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Upload, ScanLine, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { ApiError, detectPotholes } from '../services/api';
+import { ApiClient, ApiError } from '../services/api';
 import type { PhotoDetections } from '../types';
 import LoadingIndicator from './LoadingIndicator';
 import '../photo-detector.css';
@@ -49,7 +49,7 @@ export default function PhotoDetector() {
     const abort = new AbortController(); controller.current = abort;
     setBusy(true); setResult(null); setError('');
     try {
-      const response = await detectPotholes(selection.file, abort.signal);
+      const response = await ApiClient.detectPotholes(selection.file, abort.signal);
       if (current === sequence.current) setResult(response);
     } catch (cause) {
       if (current !== sequence.current || abort.signal.aborted) return;
@@ -77,14 +77,14 @@ export default function PhotoDetector() {
       <div className="photo-preview-heading"><div><strong>Vista previa</strong><span>{selection.width} × {selection.height} píxeles · {(selection.file.size / 1024 / 1024).toFixed(2)} MB</span></div><button type="button" className="button-secondary" disabled={busy} onClick={clear}><Trash2 size={16} /> Quitar imagen</button></div>
       <div className="photo-image-container" data-testid="photo-image-container">
         <img src={selection.url} alt="Fotografía de la carretera seleccionada" className="photo-source-image" />
-        {result?.detecciones.map((detection, index) => {
+        {result?.detections.map((detection, index) => {
           const [x1, y1, x2, y2] = detection.bbox;
-          return <div key={index} className="photo-bbox" data-testid="photo-bbox" style={{ left: `${x1 / result.ancho * 100}%`, top: `${y1 / result.alto * 100}%`, width: `${(x2 - x1) / result.ancho * 100}%`, height: `${(y2 - y1) / result.alto * 100}%` }} aria-label={`Bache ${index + 1}, confianza ${Math.round(detection.confianza * 100)} por ciento`}><span>{index + 1} · Bache {Math.round(detection.confianza * 100)}%</span></div>;
+          return <div key={index} className="photo-bbox" data-testid="photo-bbox" style={{ left: `${x1 / result.width * 100}%`, top: `${y1 / result.height * 100}%`, width: `${(x2 - x1) / result.width * 100}%`, height: `${(y2 - y1) / result.height * 100}%` }} aria-label={`Bache ${index + 1}, confianza ${Math.round(detection.confidence * 100)} por ciento`}><span>{index + 1} · Bache {Math.round(detection.confidence * 100)}%</span></div>;
         })}
       </div>
       <button type="button" className="button-primary photo-detect-button" disabled={busy || validating} onClick={() => void detect()}>{busy ? <LoadingIndicator label="Detectando baches…" /> : <><ScanLine size={21} /> Detectar baches</>}</button>
     </>}
     {error && <p className="photo-message error" role="alert"><AlertTriangle size={19} />{error}</p>}
-    {result && <section className="photo-results" aria-labelledby="photo-result-title"><div className="photo-result-summary" role="status"><CheckCircle2 size={23} /><div><h2 id="photo-result-title">{result.total_baches ? `${result.total_baches} ${result.total_baches === 1 ? 'bache detectado' : 'baches detectados'}` : 'No se detectaron baches'}</h2><p>{result.total_baches ? 'Los recuadros señalan los posibles baches y su confianza.' : 'El modelo no encontró baches por encima del umbral configurado en esta imagen.'}</p></div></div>{result.detecciones.length > 0 && <ol className="photo-detection-list">{result.detecciones.map((detection, index) => <li key={index}><span>Bache {index + 1}</span><strong>{Math.round(detection.confianza * 100)}% de confianza</strong></li>)}</ol>}<p className="form-help">La confianza describe la predicción del modelo; no equivale a la profundidad ni al peligro del bache. Los resultados requieren verificación.</p></section>}
+    {result && <section className="photo-results" aria-labelledby="photo-result-title"><div className="photo-result-summary" role="status"><CheckCircle2 size={23} /><div><h2 id="photo-result-title">{result.count ? `${result.count} ${result.count === 1 ? 'bache detectado' : 'baches detectados'}` : 'No se detectaron baches'}</h2><p>{result.count ? 'Los recuadros señalan los posibles baches y su confianza.' : 'El modelo no encontró baches por encima del umbral configurado en esta imagen.'}</p></div></div>{result.detections.length > 0 && <ol className="photo-detection-list">{result.detections.map((detection, index) => <li key={index}><span>Bache {index + 1}</span><strong>{Math.round(detection.confidence * 100)}% de confianza</strong></li>)}</ol>}<p className="form-help">La confianza describe la predicción del modelo; no equivale a la profundidad ni al peligro del bache. Los resultados requieren verificación.</p></section>}
   </section>;
 }

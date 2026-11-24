@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowRight, Check, Eye, EyeOff, MapPin, ShieldCheck, Route } from 'lucide-react';
-import { authenticate, registerAccount } from '../services/api';
+import { ApiClient } from '../services/api';
 import LoadingIndicator from './LoadingIndicator';
 import DemoAccounts from './DemoAccounts';
 import type { DemoAccount } from '../types';
@@ -26,8 +26,8 @@ export default function AuthScreen({ onAuthenticated, initialNotice = '' }: { on
     if (registering && (!rules.every(([, valid]) => valid) || name.trim().length < 2)) { setError(true); setNotice('No se pudo completar la operación. Revisa los requisitos del formulario.'); return; }
     setBusy(true); setNotice(''); setError(false);
     try {
-      if (registering) { await registerAccount(name.trim(), email.trim(), password, confirmation); setName(''); setEmail(''); setPassword(''); setConfirmation(''); setMode('login'); }
-      else { await authenticate(email.trim(), password); setEmail(''); setPassword(''); setConfirmation(''); }
+      if (registering) { await ApiClient.registerAccount(name.trim(), email.trim(), password, confirmation); setName(''); setEmail(''); setPassword(''); setConfirmation(''); setMode('login'); }
+      else { await ApiClient.authenticate(email.trim(), password); setEmail(''); setPassword(''); setConfirmation(''); }
       setNotice('Todo se ejecutó correctamente.'); if (!registering) onAuthenticated();
     } catch { setPassword(''); setConfirmation(''); setError(true); setNotice('No se pudo completar la operación. Revisa los requisitos e inténtalo de nuevo.'); }
     finally { setBusy(false); }
@@ -36,7 +36,7 @@ export default function AuthScreen({ onAuthenticated, initialNotice = '' }: { on
     if (busy) return;
     setMode('login'); setEmail(account.email); setPassword(account.password);
     setBusy(true); setNotice(''); setError(false);
-    try { await authenticate(account.email, account.password); setEmail(''); setPassword(''); setNotice('Todo se ejecutó correctamente.'); onAuthenticated(); }
+    try { await ApiClient.authenticate(account.email, account.password); setEmail(''); setPassword(''); setNotice('Todo se ejecutó correctamente.'); onAuthenticated(); }
     catch (cause) { setPassword(''); setError(true); setNotice((cause as Error).message || 'No se pudo completar la operación. Inténtalo de nuevo.'); }
     finally { setBusy(false); }
   }

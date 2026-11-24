@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { GraphSnapshot } from '../src/types/graphs.ts';
-import { adjacency, edgeKey, graphPoint, pathEdges, validateGraphSnapshot } from '../src/services/graphView.ts';
+import { GraphView } from '../src/services/graphView.ts';
 
 function snapshot(): GraphSnapshot {
   return {
@@ -20,21 +20,21 @@ function snapshot(): GraphSnapshot {
 }
 
 test('adjacency is symmetric and preserves the original response', () => {
-  const value = snapshot(), before = JSON.stringify(value), graph = adjacency(validateGraphSnapshot(value));
+  const value = snapshot(), before = JSON.stringify(value), graph = GraphView.adjacency(GraphView.validateGraphSnapshot(value));
   assert.equal(graph.get('a')!.get('b'), 120);
   assert.equal(graph.get('b')!.get('a'), 120);
   assert.equal(JSON.stringify(value), before);
 });
 
 test('path highlighting includes only consecutive undirected edges', () => {
-  const path = pathEdges(['a', 'b', 'c']);
-  assert(path.has(edgeKey('b', 'a'))); assert(path.has(edgeKey('c', 'b')));
-  assert(!path.has(edgeKey('a', 'c')));
-  assert.notEqual(edgeKey('a|b', 'c'), edgeKey('a', 'b|c'));
+  const path = GraphView.pathEdges(['a', 'b', 'c']);
+  assert(path.has(GraphView.edgeKey('b', 'a'))); assert(path.has(GraphView.edgeKey('c', 'b')));
+  assert(!path.has(GraphView.edgeKey('a', 'c')));
+  assert.notEqual(GraphView.edgeKey('a|b', 'c'), GraphView.edgeKey('a', 'b|c'));
 });
 
 test('diagram positions are finite and distinct through 80 vertices', () => {
-  const points = Array.from({ length: 80 }, (_, i) => graphPoint(i, 80));
+  const points = Array.from({ length: 80 }, (_, i) => GraphView.graphPoint(i, 80));
   assert.equal(new Set(points.map(p => `${p.x}|${p.y}`)).size, 80);
   assert(points.every(p => Number.isFinite(p.x) && p.x >= 100 && p.x <= 700 && p.y >= 75 && p.y <= 645));
 });
@@ -46,7 +46,7 @@ test('malformed edges cannot enter diagram or adjacency lists', () => {
     (v: GraphSnapshot) => { v.graph.edges[0].distanceMeters = Infinity; },
     (v: GraphSnapshot) => { v.graph.edges[0].distanceMeters = 251; },
     (v: GraphSnapshot) => { v.graph.edges[0].target = 'a'; },
-  ]) { const value = snapshot(); change(value); assert.throws(() => validateGraphSnapshot(value)); }
+  ]) { const value = snapshot(); change(value); assert.throws(() => GraphView.validateGraphSnapshot(value)); }
 });
 
 test('scope, coordinates, references and metrics have enforced bounds', () => {
@@ -58,14 +58,14 @@ test('scope, coordinates, references and metrics have enforced bounds', () => {
     (v: GraphSnapshot) => { v.graph.nodes[1].degree = 0; },
     (v: GraphSnapshot) => { v.graph.components[0].push('a'); },
     (v: GraphSnapshot) => { v.graph.traversal.reportIds = ['a', 'a']; },
-  ]) { const value = snapshot(); change(value); assert.throws(() => validateGraphSnapshot(value)); }
+  ]) { const value = snapshot(); change(value); assert.throws(() => GraphView.validateGraphSnapshot(value)); }
 });
 
 test('path cannot claim an incorrect accumulated distance or unknown report', () => {
   const value = snapshot(); value.graph.path!.distanceMeters = 5;
-  assert.throws(() => validateGraphSnapshot(value));
+  assert.throws(() => GraphView.validateGraphSnapshot(value));
   value.graph.path!.distanceMeters = 120; value.graph.path!.reportIds[1] = 'missing';
-  assert.throws(() => validateGraphSnapshot(value));
+  assert.throws(() => GraphView.validateGraphSnapshot(value));
 });
 
 test('empty snapshot is supported without inventing a start vertex', () => {
@@ -73,5 +73,5 @@ test('empty snapshot is supported without inventing a start vertex', () => {
   value.graph.nodes = []; value.graph.edges = []; value.graph.components = [];
   value.graph.metrics = { vertices: 0, edges: 0, components: 0, isolated: 0, maxDegree: 0 };
   value.graph.traversal = { order: 'bfs', startId: null, reportIds: [] }; value.graph.path = null;
-  assert.equal(validateGraphSnapshot(value).graph.traversal.startId, null);
+  assert.equal(GraphView.validateGraphSnapshot(value).graph.traversal.startId, null);
 });

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw, Timer } from 'lucide-react';
 import type { Report } from '../types';
-import { loadDashboard } from '../services/profile';
+import { ProfileApi } from '../services/profile';
 import type { DashboardSection } from '../services/profile';
-import { peopleText, riskText, statusText } from '../services/format';
+import { Formatter } from '../services/format';
 import ReportCard from './ReportCard';
 
 interface Totals { potholesActive: number; potholesRepaired: number; reports: number; communityReports: number; users: number; people: number; passes: number; scans: number; scans24h: number; trips: number; activeSessions: number }
@@ -19,7 +19,7 @@ const SECTIONS: { key: DashboardSection; label: string }[] = [
   { key: 'top', label: 'Baches más transitados' }, { key: 'pipeline', label: 'Velocidad del escaneo' },
 ];
 
-/** Una barra por día; una sola serie por gráfico (sin leyenda), con tooltip y tabla accesible. */
+/** One bar per day; a single series per chart (no legend), with a tooltip and an accessible table. */
 function DailyBars({ title, days, values }: { title: string; days: string[]; values: number[] }) {
   const max = Math.max(1, ...values);
   const total = values.reduce((sum, value) => sum + value, 0);
@@ -64,10 +64,10 @@ export default function Dashboard({ onMap }: { onMap: (report: Report) => void }
     const current = new AbortController();
     controller.current = current;
     const started = performance.now();
-    // Las cinco secciones se piden en paralelo y cada una aparece en cuanto llega.
+    // The five sections are requested in parallel and each one appears as soon as it arrives.
     for (const { key } of SECTIONS) {
       const sent = performance.now();
-      void loadDashboard(key, current.signal).then(response => {
+      void ProfileApi.loadDashboard(key, current.signal).then(response => {
         if (current.signal.aborted) return;
         const now = performance.now();
         setLoads(previous => ({ ...previous, [key]: { state: 'done', data: response.data, serverMs: response.serverMs,
@@ -132,16 +132,16 @@ export default function Dashboard({ onMap }: { onMap: (report: Report) => void }
     <section className="dash-card"><header><h2>Riesgo y estados</h2>{timing(risk)}</header>
       {risk?.data ? <>
         <h3>Nivel de riesgo (baches activos)</h3>
-        <Breakdown entries={['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(level => [level, risk.data!.levels[level] || 0])} labels={riskText}
+        <Breakdown entries={['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(level => [level, risk.data!.levels[level] || 0])} labels={Formatter.riskText}
           total={Object.values(risk.data.levels).reduce((sum, value) => sum + value, 0)} />
         <h3>Estado de atención</h3>
-        <Breakdown entries={Object.keys(statusText).map(status => [status, risk.data!.statuses[status] || 0])} labels={statusText}
+        <Breakdown entries={Object.keys(Formatter.statusText).map(status => [status, risk.data!.statuses[status] || 0])} labels={Formatter.statusText}
           total={Object.values(risk.data.statuses).reduce((sum, value) => sum + value, 0)} />
       </> : skeleton}
     </section>
 
     <section className="dash-card"><header><h2>Baches por los que más personas han pasado</h2>{timing(top)}</header>
-      {top?.data ? top.data.potholes.length ? top.data.potholes.map(report => <div key={report.id}><p className="people-headline">{peopleText(report.peopleCount)}</p><ReportCard report={report} onMap={onMap} /></div>)
+      {top?.data ? top.data.potholes.length ? top.data.potholes.map(report => <div key={report.id}><p className="people-headline">{Formatter.peopleText(report.peopleCount)}</p><ReportCard report={report} onMap={onMap} /></div>)
         : <p className="section-description">Todavía no hay pasos registrados. Se cuentan al conducir o recorrer cerca de un bache conocido.</p> : skeleton}
     </section>
 

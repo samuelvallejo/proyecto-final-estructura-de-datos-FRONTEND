@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Position, Report } from '../types';
-import { loadNearby } from '../services/api';
-import { usableGPS } from '../services/community';
+import { ApiClient } from '../services/api';
+import { GpsTools } from '../services/community';
 
 export default function useCommunityFeed(location: Position | null, enabled: boolean, revision: number) {
   const latest = useRef(location);
@@ -17,8 +17,8 @@ export default function useCommunityFeed(location: Position | null, enabled: boo
     let timer: ReturnType<typeof setTimeout>;
     async function refresh() {
       try {
-        if (!usableGPS(latest.current)) { setFeedError(true); return; }
-        const page = await loadNearby(latest.current, controller.signal);
+        if (!GpsTools.usableGPS(latest.current)) { setFeedError(true); return; }
+        const page = await ApiClient.loadNearby(latest.current, controller.signal);
         if (!controller.signal.aborted) { setReports(page.reports); setUpdatedAt(Date.now()); setFeedError(false); }
       } catch { if (!controller.signal.aborted) setFeedError(true); }
       finally { if (!controller.signal.aborted) timer = setTimeout(refresh, 15000); }
