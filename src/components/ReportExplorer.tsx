@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../trees.css';
 import { Download, MapPin, Search, Star } from 'lucide-react';
 import type { Report } from '../types';
@@ -6,7 +6,7 @@ import { ReportTools } from '../services/reportTools';
 import { ReportRiskIndex } from '../services/reportTree';
 import { Formatter } from '../services/format';
 import { SearchView } from '../services/search';
-import useReportSearch from '../hooks/useReportSearch';
+import useReportSearch, { searchCache } from '../hooks/useReportSearch';
 
 interface Props { reports: Report[]; total: number; loading: boolean; onMap: (report: Report) => void }
 const storageKey = 'bachescan-favorites-v1';
@@ -25,6 +25,8 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
   const [notice, setNotice] = useState('');
   const [treeOrder, setTreeOrder] = useState<'original' | 'ascending' | 'descending'>('original');
   const search = useReportSearch(query);
+  // New data from the platform makes earlier answers obsolete.
+  useEffect(() => { searchCache.clear(); }, [reports]);
   // With a server answer the text filter already ran on the whole platform; the other filters still apply.
   const base = SearchView.searchBase(reports, query, search.response ? { query: search.query, reports: search.response.reports } : null);
   const visible = ReportRiskIndex.orderReports(ReportTools.filterReports(base.reports, { query: base.fromServer ? '' : query, risk, damage, favoritesOnly }, favorites), treeOrder);
@@ -59,7 +61,7 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
     </div>
     <p className="form-help" id="report-search-help">Busca por calle, barrio, ciudad o daño: máximo 120 caracteres. Desde dos letras la búsqueda recorre todos los reportes activos de la plataforma. Elige un riesgo o tipo de daño para reducir los resultados; «Limpiar filtros» vuelve a mostrarlos todos.</p>
     <p className="explorer-count" role="status">{loading ? 'Actualizando reportes…' : search.searching ? 'Buscando en toda la plataforma…'
-      : base.fromServer && search.response ? `${visible.length} resultados · ${search.response.total} coincidencias en toda la plataforma (${search.response.tookMs.toLocaleString('es-CO')} ms en el servidor)`
+      : base.fromServer && search.response ? `${visible.length} resultados · ${search.response.total} coincidencias en toda la plataforma (${search.fromCache ? 'respuesta reutilizada de la caché del navegador' : `${search.response.tookMs.toLocaleString('es-CO')} ms en el servidor`})`
         : `${visible.length} resultados de ${reports.length} cargados · ${total} en plataforma`}</p>
     {search.error && <p className="explorer-help" role="status">No se pudo buscar en el servidor ({search.error}). Se muestran coincidencias entre los reportes cargados.</p>}
     {!base.fromServer && total > reports.length && <p className="explorer-help">Sin texto de búsqueda, los filtros y el CSV usan los reportes cargados. Usa «Cargar más reportes» para ampliarlos.</p>}
