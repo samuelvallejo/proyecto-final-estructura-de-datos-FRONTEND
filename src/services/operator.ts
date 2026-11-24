@@ -46,6 +46,13 @@ export class OperatorView {
     hazard: 'Riesgo', exposure: 'Personas expuestas', traffic: 'Pasos registrados', waiting: 'Tiempo de espera', status: 'Estado validado',
   };
 
+  static readonly DEMO_READ_ONLY_NOTICE = 'Cuenta de demostración: puedes consultar todo, pero los cambios de estado, roles y fusiones están desactivados para proteger los datos reales.';
+
+  /** Message shown instead of the write controls for a read-only demo session. */
+  static readOnlyNotice(me: Pick<Me, 'readOnly'> | null | undefined): string {
+    return me?.readOnly ? OperatorView.DEMO_READ_ONLY_NOTICE : '';
+  }
+
   static canUseMaintenance(me: Pick<Me, 'role'> | null | undefined): boolean {
     return Boolean(me && OperatorView.FIELD_ROLES.includes(me.role));
   }

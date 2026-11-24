@@ -4,6 +4,7 @@ import type { AuditEvent, Me, Report, ReportStatus, Role, SessionSummary } from 
 import { AdminApi } from '../services/profile';
 import type { AdminOverview, AdminTrip, AdminUser } from '../services/profile';
 import { Formatter } from '../services/format';
+import { OperatorView } from '../services/operator';
 import { Avatar } from './ProfileAvatar';
 import { SessionCard } from './ProfilePage';
 import { TripMetrics } from './TripHistory';
@@ -54,6 +55,7 @@ export default function AdminPanel({ me, onMap }: { me: Me | null; onMap: (repor
     <div className="segmented scrollable" role="tablist" aria-label="Secciones de administración">
       {tabs.map(([key, label, Icon]) => <button key={key} role="tab" aria-selected={section === key} onClick={() => { setError(''); setNotice(''); setSection(key); }}><Icon size={15} /> {label}</button>)}
     </div>
+    {me?.readOnly && <p className="message info" role="note">{OperatorView.readOnlyNotice(me)} Los correos y lugares de las cuentas reales aparecen ocultos.</p>}
     {error && <p className="message error" role="alert">{error}</p>}
     {notice && <p className="message success" role="status">{notice}</p>}
 
@@ -76,10 +78,10 @@ export default function AdminPanel({ me, onMap }: { me: Me | null; onMap: (repor
         <small>{user.sessions} sesiones · {user.reports} reportes · {user.passes} pasos · {user.trips} recorridos</small></div>
       <div className="admin-user-actions">
         <label className="sr-only" htmlFor={`role-${user.id}`}>Rol de {user.displayName}</label>
-        <select id={`role-${user.id}`} value={user.role} disabled={busy === user.id} onChange={event => void run(user.id, () => AdminApi.adminSetRole(user.id, event.target.value as Role), 'Rol actualizado.')}>
+        <select id={`role-${user.id}`} value={user.role} disabled={busy === user.id || Boolean(me?.readOnly)} onChange={event => void run(user.id, () => AdminApi.adminSetRole(user.id, event.target.value as Role), 'Rol actualizado.')}>
           {ROLES.map(role => <option key={role} value={role}>{role}</option>)}
         </select>
-        <button className="button-secondary" disabled={busy === user.id || user.id === me?.id} onClick={() => void run(user.id, () => AdminApi.adminSetActive(user.id, !user.active), user.active ? 'Cuenta desactivada y sesiones cerradas.' : 'Cuenta activada.')}>{user.active ? 'Desactivar' : 'Activar'}</button>
+        <button className="button-secondary" disabled={busy === user.id || user.id === me?.id || Boolean(me?.readOnly)} onClick={() => void run(user.id, () => AdminApi.adminSetActive(user.id, !user.active), user.active ? 'Cuenta desactivada y sesiones cerradas.' : 'Cuenta activada.')}>{user.active ? 'Desactivar' : 'Activar'}</button>
       </div>
     </article>)}</div> : <LoadingIndicator label="Cargando usuarios…" />)}
 
@@ -87,7 +89,7 @@ export default function AdminPanel({ me, onMap }: { me: Me | null; onMap: (repor
       <label className="map-risk-filter">Estado<select value={statusFilter} onChange={event => setStatusFilter(event.target.value as ReportStatus | 'all')}>
         <option value="all">Todos</option>{STATUSES.map(status => <option key={status} value={status}>{Formatter.statusText[status]}</option>)}</select></label>
       {reports ? <><p className="form-help">{reports.items.length} de {reports.total} reportes</p>{reports.items.map(report => <ReportCard key={report.id} report={report} onMap={onMap}>
-        <select aria-label="Cambiar estado del bache" value={report.status} disabled={busy === report.id} onChange={event => void run(report.id, () => AdminApi.adminSetStatus(report.id, event.target.value as ReportStatus), 'Estado del bache actualizado.')}>
+        <select aria-label="Cambiar estado del bache" value={report.status} disabled={busy === report.id || Boolean(me?.readOnly)} onChange={event => void run(report.id, () => AdminApi.adminSetStatus(report.id, event.target.value as ReportStatus), 'Estado del bache actualizado.')}>
           {STATUSES.map(status => <option key={status} value={status}>{Formatter.statusText[status]}</option>)}
         </select>
       </ReportCard>)}</> : <LoadingIndicator label="Cargando reportes…" />}

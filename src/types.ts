@@ -50,7 +50,9 @@ export interface Trip {
 }
 export type Role = 'Administrador' | 'Operario' | 'Conductor';
 export interface UserStats { sessions: number; scans: number; potholesDetected: number; potholesPassed: number; passes: number; trips: number; drivingMs: number }
-export interface Me { id: string; displayName: string; email: string; initials: string; role: Role; isAdmin: boolean; createdAt: number; sessionId: string; stats: UserStats }
+export interface Me { id: string; displayName: string; email: string; initials: string; role: Role; isAdmin: boolean; createdAt: number; sessionId: string; stats: UserStats;
+  /** Public demo account; with readOnly it cannot change shared data. */
+  isDemo?: boolean; readOnly?: boolean }
 export interface AuditEvent { action: string; at: number; entityId?: string | null; details: Record<string, unknown>; userName?: string; userId?: string; id?: string; sessionId?: string }
 export interface SessionSummary {
   id: string; startedAt: number; endedAt: number | null; lastSeenAt: number | null; active: boolean; current: boolean;

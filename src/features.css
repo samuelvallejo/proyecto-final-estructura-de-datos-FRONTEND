@@ -150,3 +150,4 @@
 .bottom-nav button span{white-space:nowrap}
 @media (max-width:400px){.bottom-nav button{font-size:9px}}
 @media (min-width:900px){.stat-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.general-map-stats .stat-tile strong{font-size:22px}}
+.message.info{color:#6b4b10;background:#fff4dc}
