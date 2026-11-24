@@ -36,3 +36,9 @@ test('saving sentence explains when the priority order is already optimal', () =
   assert.match(OperatorView.savingText({ savedPercent: 0, priorityOrderMeters: 900, totalMeters: 900 }), /ya es el recorrido más corto/);
   assert.match(OperatorView.savingText({ savedPercent: 37.5, priorityOrderMeters: 1600, totalMeters: 1000 }), /37,5 % menos distancia/);
 });
+
+test('checks avoided by the spatial grid as a percentage', () => {
+  assert.equal(OperatorView.checksAvoidedPercent({ candidateChecks: 25, bruteForceChecks: 1000 }), 97.5);
+  assert.equal(OperatorView.checksAvoidedPercent({ candidateChecks: 0, bruteForceChecks: 0 }), 0);
+  assert.equal(OperatorView.checksAvoidedPercent({ candidateChecks: 10, bruteForceChecks: 10 }), 0);
+});
