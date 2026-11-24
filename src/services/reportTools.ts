@@ -1,6 +1,7 @@
 import type { Report } from '../types';
 import { HashSet } from '../data-structures/HashSet.ts';
 import { LinkedList } from '../data-structures/LinkedList.ts';
+import { Formatter } from './format.ts';
 
 export interface Filters { query: string; risk: string; damage: string; favoritesOnly: boolean }
 
@@ -42,7 +43,8 @@ export class ReportTools {
     for (const report of reports) rows.append([new Date(report.timestamp).toISOString(),
       ReportTools.damageLabels[report.potholeType || 'OTRO_DANO'], ReportTools.riskLabels[report.hazardLevel], report.hazardScore,
       report.zone.fullAddress || [report.zone.street, report.zone.neighborhood, report.zone.city].filter(Boolean).join(', '),
-      report.location.lat, report.location.lng, report.location.accuracy, report.aiDescription, 'Sin verificar']);
+      report.location.lat, report.location.lng, report.location.accuracy, report.aiDescription,
+      Formatter.statusText[report.status] || Formatter.statusText.UNVERIFIED]);
     return '﻿' + rows.map(row => row.map(ReportTools.csvCell).join(';')).toArray().join('\r\n');
   }
 }
