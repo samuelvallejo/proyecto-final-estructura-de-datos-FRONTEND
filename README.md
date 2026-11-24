@@ -94,3 +94,12 @@ Consulta [la guía de árboles](docs/ARBOLES.md) para el uso, la correspondencia
 En **Reportes → Abrir explorador de grafos**, o **Estructuras**, consulta conexiones entre baches, grupos conectados y vecinos. Selecciona origen/destino y BFS o DFS; Dijkstra destaca el camino de menor distancia acumulada. Puedes abrir el diagrama y la vista geográfica de la red. La muestra incluye hasta 80 reportes activos de mayor riesgo y admite conexiones de 50 a 2000 metros. Las líneas representan cercanía, no calles o rutas para conducir.
 
 Consulta [GRAFOS.md](docs/GRAFOS.md) para los conceptos investigados, referencias académicas, archivos, pasos de uso, restricciones y pruebas. Requiere sesión y el backend actualizado; no necesita dependencias nuevas.
+
+## Mantenimiento vial (rol Operario)
+
+Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** en el inicio y en el menú del avatar:
+
+- **Cola de trabajo**: baches abiertos ordenados por el montículo binario indexado del backend (`GET /api/operator/queue`), con el desglose de la prioridad y los cambios de estado permitidos (`POST /api/operator/reports/{id}/transition`) y su historial.
+- **Plan de jornada**: los baches más urgentes ordenados con vecino más cercano + 2-opt (`GET /api/operator/plan`). El mapa dibuja el orden de visita y la pantalla compara la distancia con el orden de prioridad. Son distancias en línea recta, no rutas por calles.
+
+Archivos: `src/components/operator/`, `src/services/operator.ts`, `src/types/operator.ts`, `src/operator.css` y `tests/operator.test.ts`. El Conductor no ve la sección y el backend le responde 403.

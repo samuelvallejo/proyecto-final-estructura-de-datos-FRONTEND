@@ -11,6 +11,7 @@ export class Formatter {
     'pothole.pass': 'Pasó por un bache conocido', 'trip.started': 'Inició un recorrido', 'trip.finished': 'Finalizó un recorrido',
     'photo.analyzed': 'Analizó una fotografía', 'admin.user.role': 'Cambió el rol de una cuenta',
     'admin.user.active': 'Cambió el acceso de una cuenta', 'admin.report.status': 'Cambió el estado de un bache',
+    'operator.report.status': 'Actualizó el estado de un bache en mantenimiento',
   };
   private static readonly avatarPalette = ['#2f6b45', '#8a5a14', '#3d5f8f', '#7c3f62', '#4f6b1d', '#a04d2f', '#2d6a6a', '#5b4b8a'];
 

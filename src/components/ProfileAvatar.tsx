@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { BarChart3, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { BarChart3, LogOut, ShieldCheck, UserRound, Wrench } from 'lucide-react';
 import type { Me } from '../types';
 import { Formatter } from '../services/format';
+import { OperatorView } from '../services/operator';
 
 export function Avatar({ name, initials, size = 36 }: { name: string; initials?: string; size?: number }) {
   return <span className="avatar" aria-hidden="true" style={{ width: size, height: size, fontSize: Math.round(size * .38), background: Formatter.avatarColor(name) }}>
@@ -9,7 +10,7 @@ export function Avatar({ name, initials, size = 36 }: { name: string; initials?:
   </span>;
 }
 
-interface Props { me: Me | null; onNavigate: (tab: 'profile' | 'dashboard' | 'admin') => void; onLogout: () => void; logoutBusy: boolean }
+interface Props { me: Me | null; onNavigate: (tab: 'profile' | 'dashboard' | 'admin' | 'operator') => void; onLogout: () => void; logoutBusy: boolean }
 
 /** Automatic profile icon: initials and color of each account, with a quick menu. */
 export default function ProfileAvatar({ me, onNavigate, onLogout, logoutBusy }: Props) {
@@ -24,7 +25,7 @@ export default function ProfileAvatar({ me, onNavigate, onLogout, logoutBusy }: 
     document.addEventListener('keydown', close);
     return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', close); };
   }, [open]);
-  const go = (tab: 'profile' | 'dashboard' | 'admin') => { setOpen(false); onNavigate(tab); };
+  const go = (tab: 'profile' | 'dashboard' | 'admin' | 'operator') => { setOpen(false); onNavigate(tab); };
   const name = me?.displayName || 'Mi cuenta';
   return <div className="profile-avatar" ref={root}>
     <button className="avatar-button" aria-haspopup="menu" aria-expanded={open} aria-label={`Abrir menú de ${name}`} onClick={() => setOpen(value => !value)}>
@@ -35,6 +36,7 @@ export default function ProfileAvatar({ me, onNavigate, onLogout, logoutBusy }: 
       <div className="avatar-menu-head"><Avatar name={name} initials={me?.initials} size={42} /><div><strong>{name}</strong><small>{me?.email}</small><span className={`role-chip role-${(me?.role || 'Conductor').toLowerCase()}`}>{me?.role || 'Conductor'}</span></div></div>
       <button role="menuitem" onClick={() => go('profile')}><UserRound size={17} /> Mi perfil e historial</button>
       <button role="menuitem" onClick={() => go('dashboard')}><BarChart3 size={17} /> Panel de datos</button>
+      {OperatorView.canUseMaintenance(me) && <button role="menuitem" onClick={() => go('operator')}><Wrench size={17} /> Mantenimiento vial</button>}
       {me?.isAdmin && <button role="menuitem" onClick={() => go('admin')}><ShieldCheck size={17} /> Administración</button>}
       <button role="menuitem" className="danger" disabled={logoutBusy} onClick={() => { setOpen(false); onLogout(); }}><LogOut size={17} /> Cerrar sesión</button>
     </div>}
