@@ -95,13 +95,16 @@ En **Reportes → Abrir explorador de grafos**, o **Estructuras**, consulta cone
 
 Consulta [GRAFOS.md](docs/GRAFOS.md) para los conceptos investigados, referencias académicas, archivos, pasos de uso, restricciones y pruebas. Requiere sesión y el backend actualizado; no necesita dependencias nuevas.
 
+## Búsqueda en toda la plataforma
+
+En **Reportes**, desde dos letras la búsqueda se hace en el servidor (`GET /api/reports/search`), que usa un índice invertido y un árbol de prefijos: encuentra baches que no estén cargados en el navegador y completa la última palabra (`panam` → Avenida Panamericana). Las sugerencias de calles, barrios y ciudades salen de `GET /api/reports/suggest`. Los filtros de riesgo, daño y favoritos, el orden y el CSV se aplican sobre esos resultados. Si el servidor no responde, se filtran los reportes cargados.
+
 ## Mantenimiento vial (rol Operario)
 
 Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** en el inicio y en el menú del avatar:
 
 - **Cola de trabajo**: baches abiertos ordenados por el montículo binario indexado del backend (`GET /api/operator/queue`), con el desglose de la prioridad y los cambios de estado permitidos (`POST /api/operator/reports/{id}/transition`) y su historial.
 - **Plan de jornada**: los baches más urgentes ordenados con vecino más cercano + 2-opt (`GET /api/operator/plan`). El mapa dibuja el orden de visita y la pantalla compara la distancia con el orden de prioridad. Son distancias en línea recta, no rutas por calles.
-
 - **Duplicados**: grupos de reportes tan cercanos que probablemente son el mismo hueco (`GET /api/operator/duplicates`), con las comparaciones que evita la rejilla espacial frente a la fuerza bruta. La persona desmarca los que sean huecos distintos y fusiona el resto (`POST /api/operator/duplicates/merge`).
 
 Archivos: `src/components/operator/`, `src/services/operator.ts`, `src/types/operator.ts`, `src/operator.css` y `tests/operator.test.ts`. El Conductor no ve la sección y el backend le responde 403.
