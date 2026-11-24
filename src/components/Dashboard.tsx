@@ -10,8 +10,8 @@ interface Totals { potholesActive: number; potholesRepaired: number; reports: nu
 interface Series { days: string[]; reports: number[]; scans: number[]; passes: number[] }
 interface Risk { levels: Record<string, number>; statuses: Record<string, number> }
 interface Top { potholes: Report[] }
-interface Latency { samples: number; p50: number | null; p95: number | null }
-interface Pipeline { queue: { size: number; runningAndQueued: number }; latency: Latency | null; modelLatency: Latency | null; liveImageSize: number; photoImageSize: number; nextScanMs: number }
+interface Latency { samples: number; p50: number | null; p95: number | null; scope?: 'all-replicas' | 'this-replica' }
+interface Pipeline { queue: { size: number; runningAndQueued: number }; latency: Latency | null; modelLatency: Latency | null; liveImageSize: number; photoImageSize: number; nextScanMs: number; instance?: string }
 interface Load<T> { state: 'loading' | 'done' | 'error'; data?: T; serverMs?: number; clientMs?: number; arrivedAt?: number; error?: string }
 
 const SECTIONS: { key: DashboardSection; label: string }[] = [
@@ -147,12 +147,13 @@ export default function Dashboard({ onMap }: { onMap: (report: Report) => void }
 
     <section className="dash-card"><header><h2>Velocidad del escaneo</h2>{timing(pipeline)}</header>
       {pipeline?.data ? <div className="stat-grid">
-        <div className="stat-tile"><strong>{pipeline.data.modelLatency?.p50 ?? '—'} ms</strong><span>Modelo YOLO (mediana)</span></div>
-        <div className="stat-tile"><strong>{pipeline.data.latency?.p95 ?? '—'} ms</strong><span>Análisis completo (p95)</span></div>
+        <div className="stat-tile"><strong>{pipeline.data.modelLatency?.p50 ?? '—'} ms</strong><span>Modelo YOLO (mediana, esta réplica)</span></div>
+        <div className="stat-tile"><strong>{pipeline.data.latency?.p95 ?? '—'} ms</strong><span>Análisis completo (p95 de los últimos {pipeline.data.latency?.samples ?? 0}, todas las réplicas)</span></div>
         <div className="stat-tile"><strong>{pipeline.data.liveImageSize} px</strong><span>Resolución en vivo (fotos: {pipeline.data.photoImageSize} px)</span></div>
         <div className="stat-tile"><strong>{pipeline.data.nextScanMs} ms</strong><span>Intervalo mínimo entre fotogramas</span></div>
-        <div className="stat-tile"><strong>{pipeline.data.queue.runningAndQueued}</strong><span>Análisis en cola ahora</span></div>
+        <div className="stat-tile"><strong>{pipeline.data.queue.runningAndQueued}</strong><span>Análisis en cola ahora (esta réplica)</span></div>
       </div> : skeleton}
+      {pipeline?.data?.instance && <p className="form-help">La mediana del modelo y la cola son de la réplica {pipeline.data.instance}; el p95 se calcula con los análisis guardados en PostgreSQL.</p>}
     </section>
   </div>;
 }
