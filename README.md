@@ -102,4 +102,6 @@ Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** 
 - **Cola de trabajo**: baches abiertos ordenados por el montículo binario indexado del backend (`GET /api/operator/queue`), con el desglose de la prioridad y los cambios de estado permitidos (`POST /api/operator/reports/{id}/transition`) y su historial.
 - **Plan de jornada**: los baches más urgentes ordenados con vecino más cercano + 2-opt (`GET /api/operator/plan`). El mapa dibuja el orden de visita y la pantalla compara la distancia con el orden de prioridad. Son distancias en línea recta, no rutas por calles.
 
+- **Duplicados**: grupos de reportes tan cercanos que probablemente son el mismo hueco (`GET /api/operator/duplicates`), con las comparaciones que evita la rejilla espacial frente a la fuerza bruta. La persona desmarca los que sean huecos distintos y fusiona el resto (`POST /api/operator/duplicates/merge`).
+
 Archivos: `src/components/operator/`, `src/services/operator.ts`, `src/types/operator.ts`, `src/operator.css` y `tests/operator.test.ts`. El Conductor no ve la sección y el backend le responde 403.
