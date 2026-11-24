@@ -66,6 +66,9 @@ test('exports reports to CSV with BOM, separator and formula escaping', () => {
   assert.equal(header, 'Fecha ISO;Tipo;Riesgo;Puntuación;Dirección;Latitud;Longitud;Precisión (m);Descripción;Estado');
   const dataRow = rows[1].replace(/^\uFEFF/, '').split(';').map(cell => cell.replace(/^"|"$/g, '')).join(';');
   assert.equal(dataRow.split(';')[2], 'Alto');
+  assert.equal(dataRow.split(';')[9], 'Sin verificar');
+  const repaired = ReportTools.reportsCsv([report({ id: 'r', status: 'REPAIRED' })]).split('\r\n')[1].split(';').map(cell => cell.replace(/^"|"$/g, ''));
+  assert.equal(repaired[9], 'Reparado');
   const dangerous = ReportTools.reportsCsv([report({ id: 'x', aiDescription: '=SUMA(1+1)' })]);
   assert.ok(dangerous.includes("'=SUMA(1+1)"));
 });
