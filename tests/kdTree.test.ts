@@ -50,3 +50,13 @@ test('within returns every point in the radius, closest first', () => {
   for (const value of expected) assert.ok(hits.some(hit => hit.value === value));
   assert.ok(hits.every((hit, index) => index === 0 || hits[index - 1].meters <= hit.meters));
 });
+
+test('hazard index ignores repaired potholes and the merge keeps unknown reports only', async () => {
+  const { HazardIndex } = await import('../src/services/hazardIndex.ts');
+  type R = import('../src/types.ts').Report;
+  const report = (id: string, lat: number, status = 'UNVERIFIED') => ({ id, status, location: { lat, lng: -77.29, accuracy: 5 } } as R);
+  const index = HazardIndex.build([report('fixed', 1.2, 'REPAIRED'), report('open', 1.2004)]);
+  assert.equal(index.size, 1);
+  assert.equal(index.nearest({ lat: 1.2, lng: -77.29 }, 80)?.value.id, 'open');
+  assert.deepEqual(HazardIndex.missingFrom([report('a', 1), report('b', 1)], [report('b', 1), report('c', 1)]).map(item => item.id), ['c']);
+});

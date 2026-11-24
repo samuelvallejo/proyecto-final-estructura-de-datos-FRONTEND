@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, ArrowRight, BarChart3, Bike, Camera, Car, Check, CirclePause, Clock3, Compass,
   Crosshair, Footprints, Info, LocateFixed, MapPin, MapPinned, Radar, RefreshCw, Route, ScanLine,
@@ -11,6 +11,7 @@ import { FrameSampler } from './services/frames';
 import { Formatter } from './services/format';
 import { GpsTools } from './services/community';
 import { OperatorView } from './services/operator';
+import { HazardIndex } from './services/hazardIndex';
 import type { Health, Me, Position, Report, ScanResponse, StructureStats, Trip, Vehicle } from './types';
 import { Stack } from './data-structures/Stack';
 const ReportMap = lazy(() => import('./components/ReportMap'));
@@ -121,7 +122,9 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
   const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
   const { reports: nearby, updatedAt: nearbyUpdatedAt, feedError } = useCommunityFeed(location, tab === 'map' || alertsEnabled || Boolean(driveVehicle), communityRevision);
   const refreshCommunity = useCallback(() => setCommunityRevision(current => current + 1), []);
-  const mapReports = [...reports, ...nearby.filter(item => !reports.some(report => report.id === item.id))];
+  const mapReports = [...reports, ...HazardIndex.missingFrom(reports, nearby)];
+  // Rebuilt only when the nearby feed changes (every 15 s), queried on every GPS update.
+  const hazards = useMemo(() => HazardIndex.build(nearby), [nearby]);
   const [patrol, setPatrol] = useState<Report | null>(null);
   const [patrolBusy, setPatrolBusy] = useState(false);
   const history = useRef(new Stack<Tab>());
@@ -506,15 +509,12 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
     const tripId = driveTripRef.current;
     const call = tripId ? TripApi.addTripSample(tripId, location) as Promise<{ passed?: number }> : ProfileApi.recordPass(location);
     void call.then(result => { if (result.passed) setDrivePassed(current => current + (result.passed || 0)); }).catch(() => {});
-    const candidates = nearby.filter(report => !['REPAIRED', 'REJECTED'].includes(report.status))
-      .map(report => ({ report, meters: GpsTools.metersBetween(location, report.location) }))
-      .filter(item => item.meters <= KNOWN_POTHOLE_ALERT_METERS);
-    const closest = Sorter.min(candidates, (a, b) => a.meters - b.meters);
-    if (closest && !alertedPotholes.current.has(closest.report.id)) {
-      alertedPotholes.current.add(closest.report.id);
-      alertDriver(`Bache conocido a ${Math.round(closest.meters)} m · ${Formatter.riskText[closest.report.hazardLevel]}`);
+    const closest = hazards.nearest(location, KNOWN_POTHOLE_ALERT_METERS);
+    if (closest && !alertedPotholes.current.has(closest.value.id)) {
+      alertedPotholes.current.add(closest.value.id);
+      alertDriver(`Bache conocido a ${Math.round(closest.meters)} m · ${Formatter.riskText[closest.value.hazardLevel]}`);
     }
-  }, [driveVehicle, location, nearby]);
+  }, [driveVehicle, location, hazards]);
 
   // Keep the driving trip up to date (potholes along the way).
   useEffect(() => {
@@ -776,7 +776,7 @@ export default function App({ me, onRefreshMe, onLogout, logoutBusy }: Props) {
               <div className="scan-note"><CirclePause size={15} /> {scanning ? 'La IA analiza el video continuamente y registra hallazgos.' : 'Sin fotos manuales. Necesitas internet, cámara y GPS.'}</div>
             </section>}
 
-            {activeTrip && !activeTrip.endedAt && <section className="journey-preview"><h2>{driving ? 'Tu trayecto en vivo' : 'Tu recorrido en vivo'}</h2><p className="section-description">La línea sigue el GPS y los marcadores muestran los baches guardados. Se actualiza durante el escaneo.</p><div className="map-frame"><Suspense fallback={<LoadingIndicator label="Preparando mapa…" />}><ReportMap reports={[...(activeTrip.reports || []), ...(driving ? nearby.filter(item => !(activeTrip.reports || []).some(report => report.id === item.id)) : [])]} location={location} trip={activeTrip} /></Suspense></div></section>}
+            {activeTrip && !activeTrip.endedAt && <section className="journey-preview"><h2>{driving ? 'Tu trayecto en vivo' : 'Tu recorrido en vivo'}</h2><p className="section-description">La línea sigue el GPS y los marcadores muestran los baches guardados. Se actualiza durante el escaneo.</p><div className="map-frame"><Suspense fallback={<LoadingIndicator label="Preparando mapa…" />}><ReportMap reports={[...(activeTrip.reports || []), ...(driving ? HazardIndex.missingFrom(activeTrip.reports || [], nearby) : [])]} location={location} trip={activeTrip} /></Suspense></div></section>}
             {!driving && <div className="feature-strip">
               <div><span className="feature-icon"><Radar size={17} /></span><strong>Detección</strong><small>Automática</small></div>
               <div><span className="feature-icon"><ShieldAlert size={17} /></span><strong>Riesgo</strong><small>Orientativo</small></div>
