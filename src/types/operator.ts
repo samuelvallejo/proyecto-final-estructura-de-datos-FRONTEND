@@ -10,7 +10,7 @@ export interface WorkQueue {
 export interface PlanStop { step: number; report: Report; priorityScore: number; legMeters: number | null }
 export interface DayPlan {
   start: { lat: number; lng: number } | null; stops: PlanStop[]; totalMeters: number; priorityOrderMeters: number;
-  savedPercent: number; improvements: number; generatedAt: number; algorithm: string;
+  savedPercent: number; improvements: number; generatedAt: number; algorithm: string; algorithms?: string[]; tookMs?: number;
 }
 export interface TransitionResult { report: Report; allowedTransitions: ReportStatus[] }
 export interface StatusEvent { id: string; at: number; from: string; to: ReportStatus; reason: string; actorName: string }

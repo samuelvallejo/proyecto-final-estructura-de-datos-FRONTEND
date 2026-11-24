@@ -1,6 +1,9 @@
 import { ApiClient } from './api.ts';
 import type { Me, Position, ReportStatus, Role } from '../types';
-import type { DayPlan, DuplicateReview, MergeResult, PriorityBreakdown, PriorityComponent, StatusEvent, TransitionResult, WorkQueue } from '../types/operator';
+import type { DayPlan, DuplicateReview, MergeResult, PlanStop, PriorityBreakdown, PriorityComponent, StatusEvent, TransitionResult, WorkQueue } from '../types/operator';
+import type { RouteItem } from '../data-structures/RouteList.ts';
+
+export type RouteAlgorithm = 'two-opt' | 'nearest-neighbour' | 'priority';
 import type { GraphEdge } from '../types/graphs';
 
 /** HTTP client of the maintenance workspace (/api/operator). */
@@ -9,8 +12,8 @@ export class OperatorApi {
     return ApiClient.request<WorkQueue>(`/operator/queue?limit=${limit}`, { signal });
   }
 
-  static loadDayPlan(limit: number, start: Position | null, signal?: AbortSignal): Promise<DayPlan> {
-    const params = new URLSearchParams({ limit: String(limit) });
+  static loadDayPlan(limit: number, start: Position | null, signal?: AbortSignal, algorithm: RouteAlgorithm = 'two-opt'): Promise<DayPlan> {
+    const params = new URLSearchParams({ limit: String(limit), algorithm });
     if (start) { params.set('lat', String(start.lat)); params.set('lng', String(start.lng)); }
     return ApiClient.request<DayPlan>(`/operator/plan?${params}`, { signal });
   }
@@ -40,6 +43,10 @@ export class OperatorView {
   static readonly transitionText: Record<ReportStatus, string> = {
     UNVERIFIED: 'Marcar sin verificar', CONFIRMED: 'Confirmar bache', IN_PROGRESS: 'Iniciar reparación',
     REPAIRED: 'Marcar reparado', REJECTED: 'Rechazar reporte',
+  };
+
+  static readonly algorithmText: Record<RouteAlgorithm, string> = {
+    'two-opt': 'Vecino más cercano + 2-opt', 'nearest-neighbour': 'Solo vecino más cercano', priority: 'Orden de prioridad',
   };
 
   static readonly componentText: Record<PriorityComponent, string> = {
@@ -82,5 +89,13 @@ export class OperatorView {
   static savingText(plan: Pick<DayPlan, 'savedPercent' | 'priorityOrderMeters' | 'totalMeters'>): string {
     if (plan.savedPercent <= 0 || plan.priorityOrderMeters <= 0) return 'El orden de prioridad ya es el recorrido más corto encontrado.';
     return `${plan.savedPercent.toLocaleString('es-CO')} % menos distancia que visitarlos por orden de prioridad.`;
+  }
+
+  /**
+   * Adapter: converts the plan returned by the API into the items the linked
+   * RouteList expects, so neither side depends on the other's shape.
+   */
+  static planToRouteItems(plan: Pick<DayPlan, 'stops'>): RouteItem<PlanStop>[] {
+    return plan.stops.map(stop => ({ id: stop.report.id, value: stop, point: { lat: stop.report.location.lat, lng: stop.report.location.lng } }));
   }
 }

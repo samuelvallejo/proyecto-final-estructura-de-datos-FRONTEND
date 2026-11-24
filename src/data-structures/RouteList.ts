@@ -7,7 +7,12 @@
  * The remaining distance is also updated in O(1): only the legs around the node
  * change (prev -> node -> next becomes prev -> next), so nothing is recomputed
  * from the beginning of the route.
+ *
+ * Design patterns: Observer (extends Observable and notifies after each change)
+ * and Iterator (``for (const entry of route)`` walks the pending stops in order).
  */
+import { Observable } from '../patterns/Observable.ts';
+
 export interface RoutePoint { lat: number; lng: number }
 export type DistanceFn = (a: RoutePoint, b: RoutePoint) => number;
 export interface RouteItem<T> { id: string; value: T; point: RoutePoint }
@@ -22,16 +27,17 @@ class StopNode<T> {
   constructor(item: RouteItem<T>) { this.id = item.id; this.value = item.value; this.point = item.point; }
 }
 
-export class RouteList<T> {
+export class RouteList<T> extends Observable implements Iterable<RouteEntry<T>> {
   private head: StopNode<T> | null = null;
   private tail: StopNode<T> | null = null;
   private readonly nodes = new Map<string, StopNode<T>>();
   private remaining = 0;
   private readonly start: RoutePoint | null;
   private readonly distance: DistanceFn;
-  visited = 0;
+  private visitedCount = 0;
 
   constructor(start: RoutePoint | null, items: RouteItem<T>[], distance: DistanceFn) {
+    super();
     this.start = start;
     this.distance = distance;
     for (const item of items) this.append(new StopNode(item));
@@ -40,10 +46,13 @@ export class RouteList<T> {
   get size(): number { return this.nodes.size; }
   /** Distance still to travel along the pending stops, in meters. */
   get remainingMeters(): number { return this.remaining; }
+  get visited(): number { return this.visitedCount; }
   /** Next stop to visit. */
   get current(): T | null { return this.head?.value ?? null; }
   isLast(id: string): boolean { return this.tail?.id === id; }
   has(id: string): boolean { return this.nodes.has(id); }
+  /** Id of the stop before ``id`` (null when it is the first one or unknown). */
+  previousIdOf(id: string): string | null { return this.nodes.get(id)?.previous?.id ?? null; }
 
   /** Stop visited: it leaves the pending route. */
   complete(id: string): boolean {
@@ -51,7 +60,17 @@ export class RouteList<T> {
     if (!node) return false;
     this.unlink(node);
     this.nodes.delete(id);
-    this.visited++;
+    this.visitedCount++;
+    this.notify();
+    return true;
+  }
+
+  /** Reverse of complete: put a visited stop back after ``afterId`` (null = first). O(1). */
+  restore(item: RouteItem<T>, afterId: string | null): boolean {
+    if (this.nodes.has(item.id) || (afterId !== null && !this.nodes.has(afterId))) return false;
+    this.insertAfter(new StopNode(item), afterId === null ? null : this.nodes.get(afterId)!);
+    this.visitedCount = Math.max(0, this.visitedCount - 1);
+    this.notify();
     return true;
   }
 
@@ -61,18 +80,36 @@ export class RouteList<T> {
     if (!node || node === this.tail) return false;
     this.unlink(node);
     this.append(node);
+    this.notify();
     return true;
   }
 
-  /** Pending stops in order, each with the distance from the previous stop (or the start). */
-  toArray(): RouteEntry<T>[] {
-    const result: RouteEntry<T>[] = [];
+  /** Move a stop right after ``afterId`` (null = first); used to undo a postponement. O(1). */
+  moveAfter(id: string, afterId: string | null): boolean {
+    const node = this.nodes.get(id);
+    const anchor = afterId === null ? null : this.nodes.get(afterId);
+    if (!node || anchor === undefined || anchor === node) return false;
+    this.unlink(node);
+    this.insertAfter(node, anchor);
+    this.notify();
+    return true;
+  }
+
+  /** Item data of a pending stop, to remember it before it is removed. */
+  itemOf(id: string): RouteItem<T> | null {
+    const node = this.nodes.get(id);
+    return node ? { id: node.id, value: node.value, point: node.point } : null;
+  }
+
+  *[Symbol.iterator](): Iterator<RouteEntry<T>> {
     for (let node = this.head; node; node = node.next) {
       const from = this.pointBefore(node);
-      result.push({ id: node.id, value: node.value, legMeters: from ? this.distance(from, node.point) : null });
+      yield { id: node.id, value: node.value, legMeters: from ? this.distance(from, node.point) : null };
     }
-    return result;
   }
+
+  /** Pending stops in order, each with the distance from the previous stop (or the start). */
+  toArray(): RouteEntry<T>[] { return [...this]; }
 
   /** Links in both directions, the map and the cached distance agree; used by the tests. */
   validate(): boolean {
@@ -94,12 +131,20 @@ export class RouteList<T> {
   }
 
   private append(node: StopNode<T>): void {
-    node.previous = this.tail;
-    node.next = null;
-    const from = this.tail?.point ?? this.start;
-    if (from) this.remaining += this.distance(from, node.point);
-    if (this.tail) this.tail.next = node; else this.head = node;
-    this.tail = node;
+    this.insertAfter(node, this.tail);
+  }
+
+  /** Link ``node`` after ``anchor`` (null = at the front), adjusting only the changed legs. */
+  private insertAfter(node: StopNode<T>, anchor: StopNode<T> | null): void {
+    const before = anchor ? anchor.point : this.start;
+    const after = anchor ? anchor.next : this.head;
+    if (before && after) this.remaining -= this.distance(before, after.point);
+    if (before) this.remaining += this.distance(before, node.point);
+    if (after) this.remaining += this.distance(node.point, after.point);
+    node.previous = anchor;
+    node.next = after;
+    if (anchor) anchor.next = node; else this.head = node;
+    if (after) after.previous = node; else this.tail = node;
     this.nodes.set(node.id, node);
   }
 
