@@ -99,6 +99,10 @@ Consulta [GRAFOS.md](docs/GRAFOS.md) para los conceptos investigados, referencia
 
 En **Reportes**, desde dos letras la búsqueda se hace en el servidor (`GET /api/reports/search`), que usa un índice invertido y un árbol de prefijos: encuentra baches que no estén cargados en el navegador y completa la última palabra (`panam` → Avenida Panamericana). Las sugerencias de calles, barrios y ciudades salen de `GET /api/reports/suggest`. Los filtros de riesgo, daño y favoritos, el orden y el CSV se aplican sobre esos resultados. Si el servidor no responde, se filtran los reportes cargados.
 
+## Modo de demostración seguro
+
+Cuando `GET /api/me` indica `readOnly` (cuentas demo con `DEMO_READ_ONLY=true` en el backend), la administración y el mantenimiento muestran un aviso y desactivan los cambios de rol, acceso, estado y fusión. El backend los rechaza igualmente con 403 y enmascara los correos y lugares de las cuentas reales.
+
 ## Mantenimiento vial (rol Operario)
 
 Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** en el inicio y en el menú del avatar:

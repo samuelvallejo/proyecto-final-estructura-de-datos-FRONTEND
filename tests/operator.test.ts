@@ -42,3 +42,9 @@ test('checks avoided by the spatial grid as a percentage', () => {
   assert.equal(OperatorView.checksAvoidedPercent({ candidateChecks: 0, bruteForceChecks: 0 }), 0);
   assert.equal(OperatorView.checksAvoidedPercent({ candidateChecks: 10, bruteForceChecks: 10 }), 0);
 });
+
+test('read-only notice appears only for read-only demo sessions', () => {
+  assert.match(OperatorView.readOnlyNotice({ readOnly: true }), /Cuenta de demostración/);
+  assert.equal(OperatorView.readOnlyNotice({ readOnly: false }), '');
+  assert.equal(OperatorView.readOnlyNotice(null), '');
+});

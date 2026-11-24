@@ -20,8 +20,8 @@ export default function OperatorPanel({ me, location, onMap }: Props) {
     <div className="segmented scrollable" role="tablist" aria-label="Secciones de mantenimiento">
       {tabs.map(([key, label, Icon]) => <button key={key} role="tab" aria-selected={section === key} onClick={() => setSection(key)}><Icon size={15} /> {label}</button>)}
     </div>
-    {section === 'queue' && <WorkQueue onMap={onMap} />}
+    {section === 'queue' && <WorkQueue onMap={onMap} readOnlyReason={OperatorView.readOnlyNotice(me)} />}
     {section === 'plan' && <DayPlan location={location} onMap={onMap} />}
-    {section === 'duplicates' && <DuplicateReview onMap={onMap} />}
+    {section === 'duplicates' && <DuplicateReview onMap={onMap} readOnlyReason={OperatorView.readOnlyNotice(me)} />}
   </div>;
 }
