@@ -97,7 +97,7 @@ Consulta [GRAFOS.md](docs/GRAFOS.md) para los conceptos investigados, referencia
 
 ## Búsqueda en toda la plataforma
 
-En **Reportes**, desde dos letras la búsqueda se hace en el servidor (`GET /api/reports/search`), que usa un índice invertido y un árbol de prefijos: encuentra baches que no estén cargados en el navegador y completa la última palabra (`panam` → Avenida Panamericana). Las sugerencias de calles, barrios y ciudades salen de `GET /api/reports/suggest`. Los filtros de riesgo, daño y favoritos, el orden y el CSV se aplican sobre esos resultados. Si el servidor no responde, se filtran los reportes cargados.
+En **Reportes**, desde dos letras la búsqueda se hace en el servidor (`GET /api/reports/search`), que usa un índice invertido y un árbol de prefijos: encuentra baches que no estén cargados en el navegador y completa la última palabra (`panam` → Avenida Panamericana). Las sugerencias de calles, barrios y ciudades salen de `GET /api/reports/suggest`. Los filtros de riesgo, daño y fechas (**Desde**/**Hasta**) también se resuelven en el servidor con un índice de bitmaps y un árbol AVL, y cada opción muestra cuántos resultados daría. Favoritos, orden y CSV se aplican sobre esos resultados. Si el servidor no responde, se filtran los reportes cargados.
 
 ## Modo de demostración seguro
 
@@ -117,6 +117,7 @@ Las cuentas con rol **Operario** o **Administrador** ven **Mantenimiento vial** 
 |---|---|---|
 | `src/data-structures/RouteList.ts` | Lista doblemente enlazada + tabla hash por id | Paradas pendientes del plan: «Visitado» y «Dejar para el final» en O(1), con la distancia restante actualizada en O(1) |
 | `src/data-structures/LruCache.ts` | Caché LRU: tabla hash + lista doblemente enlazada | Reutiliza durante un minuto las últimas 30 respuestas de la búsqueda al escribir y borrar letras |
+| `src/data-structures/KdTree.ts` | Árbol k-d (2-d) balanceado | Bache más cercano en el modo conducción (80 m) y en las alertas de 200 m, sin recorrer todos los reportes en cada lectura del GPS |
 | `src/data-structures/Stack.ts` | Pila | Historial del botón «Volver» (ya existía) |
 
 ### Patrones de diseño del frontend
