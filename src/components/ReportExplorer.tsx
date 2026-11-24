@@ -20,18 +20,23 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
   const [query, setQuery] = useState('');
   const [risk, setRisk] = useState('');
   const [damage, setDamage] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(readFavorites);
   const [notice, setNotice] = useState('');
   const [treeOrder, setTreeOrder] = useState<'original' | 'ascending' | 'descending'>('original');
-  const search = useReportSearch(query);
+  const search = useReportSearch({ text: query, risk, damage, from, to });
   // New data from the platform makes earlier answers obsolete.
   useEffect(() => { searchCache.clear(); }, [reports]);
-  // With a server answer the text filter already ran on the whole platform; the other filters still apply.
-  const base = SearchView.searchBase(reports, query, search.response ? { query: search.query, reports: search.response.reports } : null);
-  const visible = ReportRiskIndex.orderReports(ReportTools.filterReports(base.reports, { query: base.fromServer ? '' : query, risk, damage, favoritesOnly }, favorites), treeOrder);
-  const filtered = Boolean(query || risk || damage || favoritesOnly);
-  function reset() { setQuery(''); setRisk(''); setDamage(''); setFavoritesOnly(false); }
+  // With a server answer, text, risk, damage and dates already ran on the whole platform (bitmaps + AVL);
+  // only favorites, which live in this browser, are applied here.
+  const base = SearchView.searchBase(reports, search.key, search.response ? { key: search.key, reports: search.response.reports } : null);
+  const local = base.fromServer ? base.reports : base.reports.filter(report => SearchView.withinDays(report, from, to));
+  const visible = ReportRiskIndex.orderReports(ReportTools.filterReports(local, base.fromServer ? { query: '', risk: '', damage: '', favoritesOnly } : { query, risk, damage, favoritesOnly }, favorites), treeOrder);
+  const filtered = Boolean(query || risk || damage || from || to || favoritesOnly);
+  const facetText = (field: 'risk' | 'damage', value: string) => search.facets ? ` (${search.facets[field][value] ?? 0})` : '';
+  function reset() { setQuery(''); setRisk(''); setDamage(''); setFrom(''); setTo(''); setFavoritesOnly(false); }
   function toggleFavorite(id: string) {
     const next = favorites.includes(id) ? favorites.filter(item => item !== id) : [...favorites, id];
     setFavorites(next);
@@ -52,8 +57,10 @@ export default function ReportExplorer({ reports, total, loading, onMap }: Props
         <input type="search" maxLength={120} aria-describedby="report-search-help" list="report-place-suggestions" value={query} onChange={event => setQuery(event.target.value.slice(0,120))} placeholder="Calle, barrio, ciudad o daño" />
         <datalist id="report-place-suggestions">{search.suggestions.map(item => <option key={`${item.kind}-${item.label}`} value={item.label}>{`${SearchView.placeKindText[item.kind]} · ${item.count} ${item.count === 1 ? 'reporte' : 'reportes'}`}</option>)}</datalist></label>
       <div className="explorer-selects">
-        <label>Nivel de riesgo<select value={risk} onChange={event => setRisk(event.target.value)}><option value="">Todos los niveles</option>{Object.entries(ReportTools.riskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Tipo de daño<select value={damage} onChange={event => setDamage(event.target.value)}><option value="">Todos los daños</option>{Object.entries(ReportTools.damageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Nivel de riesgo<select value={risk} onChange={event => setRisk(event.target.value)}><option value="">Todos los niveles</option>{Object.entries(ReportTools.riskLabels).map(([value, label]) => <option key={value} value={value}>{label}{facetText('risk', value)}</option>)}</select></label>
+        <label>Tipo de daño<select value={damage} onChange={event => setDamage(event.target.value)}><option value="">Todos los daños</option>{Object.entries(ReportTools.damageLabels).map(([value, label]) => <option key={value} value={value}>{label}{facetText('damage', value)}</option>)}</select></label>
+        <label>Desde<input type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
+        <label>Hasta<input type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
       </div>
       <label className="tree-order">Ordenar los reportes cargados<select value={treeOrder} onChange={event => setTreeOrder(event.target.value as typeof treeOrder)}><option value="original">Conservar orden de la consulta</option><option value="descending">Mayor riesgo primero (árbol binario)</option><option value="ascending">Menor riesgo primero (árbol binario)</option></select></label>
       <label className="favorite-filter"><input type="checkbox" checked={favoritesOnly} onChange={event => setFavoritesOnly(event.target.checked)} /> Solo favoritos de este navegador</label>
